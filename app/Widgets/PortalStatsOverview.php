@@ -24,7 +24,7 @@ class PortalStatsOverview extends BaseWidget
                 ->descriptionIcon('heroicon-m-user-group'),
 
             Stat::make('Active Links', Link::where('is_active', true)->count())
-                ->description('Total clicks today: ' . AccessLog::whereDate('accessed_at', today())->count())
+                ->description('Total clicks today: ' . AccessLog::where('accessed_at', '>=', now()->startOfDay())->count())
                 ->descriptionIcon('heroicon-m-link')
                 ->color('warning'),
 

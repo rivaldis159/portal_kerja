@@ -6,13 +6,16 @@ use App\Models\Team;
 use App\Models\Link;
 use App\Models\Announcement;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 
 class PortalController
 {
     public function index()
     {
         $user = Auth::user();
-        $user->updateLastLogin();
+        if ($user->last_login < now()->startOfDay()) {
+            $user->updateLastLogin();
+        }
 
         // Get user's teams with active links
         $teams = $user->teams()
@@ -26,6 +29,7 @@ class PortalController
         // Get announcements (global + team-specific)
         $teamIds = $teams->pluck('id');
         $announcements = Announcement::active()
+            ->with('team') // <--- TAMBAHKAN INI (Eager Load)
             ->where(function ($query) use ($teamIds) {
                 $query->whereNull('team_id')
                     ->orWhereIn('team_id', $teamIds);
@@ -35,7 +39,8 @@ class PortalController
             ->get();
 
         // Get most used links for quick access
-        $recentLinks = Link::active()
+       $recentLinks = Link::active()
+            ->with('category') // <--- TAMBAHKAN INI (Eager Load Category)
             ->whereIn('team_id', $teamIds)
             ->withCount(['accessLogs as recent_clicks' => function ($query) use ($user) {
                 $query->where('user_id', $user->id)
@@ -90,21 +95,28 @@ class PortalController
         return redirect('/');
     }
 
-    public function search()
+    public function search(Request $request)
     {
-        $query = request('q');
-        $user = Auth::user();
-        $teamIds = $user->teams->pluck('id');
+        $query = $request->input('q');
 
+        // Optimasi: Tambahkan with('team', 'category')
         $links = Link::active()
-            ->whereIn('team_id', $teamIds)
+            ->with(['team', 'category']) // <--- Eager Loading (PENTING)
             ->where(function($q) use ($query) {
                 $q->where('title', 'like', "%{$query}%")
                 ->orWhere('description', 'like', "%{$query}%");
             })
-            ->with(['team', 'category'])
             ->get();
 
-        return view('portal.search', compact('links', 'query'));
+        // Optimasi: Tambahkan with('team')
+        $announcements = Announcement::active()
+            ->with('team') // <--- Eager Loading (PENTING)
+            ->where(function($q) use ($query) {
+                $q->where('title', 'like', "%{$query}%")
+                ->orWhere('content', 'like', "%{$query}%");
+            })
+            ->get();
+
+        return view('portal.search', compact('links', 'announcements', 'query'));
     }
 }
