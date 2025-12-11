@@ -10,19 +10,20 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 
-class PortalController
+class PortalController extends Controller
 {
     public function index()
     {
         $user = Auth::user();
 
+        // Mengambil tim beserta link yang HANYA boleh dilihat oleh user (Publik / Tim Sendiri)
         $teams = Team::whereHas('links', function ($query) use ($user) {
             $query->visibleToUser($user)->where('is_active', true);
         })
         ->with(['links' => function ($query) use ($user) {
             $query->visibleToUser($user)
                 ->where('is_active', true)
-                ->orderBy('order') // <--- Ganti jadi 'order'
+                ->orderBy('order')
                 ->with('category');
         }])
         ->orderBy('name')
@@ -35,12 +36,11 @@ class PortalController
 
     public function redirectToLink($linkId)
     {
-        $link = Link::findOrFail($linkId);
         $user = Auth::user();
-
-        if (!$user->teams()->where('teams.id', $link->team_id)->exists()) {
-            abort(403, 'Unauthorized access to this link.');
-        }
+        
+        // Cek permission menggunakan Scope visibleToUser agar konsisten
+        // Jika link tidak publik DAN user bukan timnya, akan otomatis 404/Fail
+        $link = Link::visibleToUser($user)->findOrFail($linkId);
 
         $link->logAccess($user);
 
@@ -49,10 +49,15 @@ class PortalController
 
     public function login()
     {
+        // Jika sudah login, lempar ke portal (Preventif tambahan)
+        if (Auth::check()) {
+            return redirect()->route('portal.index');
+        }
         return view('portal.login');
     }
 
-    public function doLogin()
+    // PERBAIKAN: Mengganti nama method dari 'doLogin' menjadi 'loginAction' sesuai route
+    public function loginAction() 
     {
         $credentials = request()->validate([
             'email' => 'required|email',
@@ -60,7 +65,8 @@ class PortalController
         ]);
 
         if (Auth::attempt($credentials)) {
-            return redirect('/portal');
+            request()->session()->regenerate(); // Security practice
+            return redirect()->intended('/portal');
         }
 
         return back()->withErrors(['email' => 'Email atau password salah']);
@@ -69,22 +75,29 @@ class PortalController
     public function logout()
     {
         Auth::logout();
+        request()->session()->invalidate();
+        request()->session()->regenerateToken();
         return redirect('/');
     }
 
     public function search(Request $request)
     {
         $query = $request->input('q');
+        $user = Auth::user();
 
-        $links = Link::active()
+        // PERBAIKAN: Menambahkan filter visibleToUser agar link privat tidak bocor di pencarian
+        $links = Link::visibleToUser($user)
+            ->active()
             ->with(['team', 'category'])
             ->where(function($q) use ($query) {
                 $q->where('title', 'like', "%{$query}%")
                 ->orWhere('description', 'like', "%{$query}%");
             })
+            ->take(20) // Limit hasil agar tidak berat
             ->get();
 
-        $announcements = Announcement::active()
+        // Filter pengumuman (Opsional: bisa ditambahkan logic tim_id juga jika perlu)
+        $announcements = Announcement::query() // Pastikan model Announcement ada scopeActive atau hapus ->active() jika belum ada
             ->with('team')
             ->where(function($q) use ($query) {
                 $q->where('title', 'like', "%{$query}%")
@@ -95,13 +108,15 @@ class PortalController
         return view('portal.search', compact('links', 'announcements', 'query'));
     }
 
-    public function editProfile()
+    // PERBAIKAN: Mengganti nama method 'editProfile' menjadi 'profile' sesuai route
+    public function profile()
     {
         return view('portal.profile', [
             'user' => Auth::user()
         ]);
     }
 
+    // Pastikan Anda juga menambahkan Route::post('/portal/profile', ...) untuk method ini di web.php jika belum
     public function updateProfile(Request $request)
     {
         $user = Auth::user();

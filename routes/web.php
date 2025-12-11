@@ -1,23 +1,33 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\PortalController;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\PortalController;
+
 
 Route::get('/', function () {
-    return redirect('/login');
-});
+    if (Auth::check()) {
+        return redirect()->route('portal.index');
+    }
+    return view('portal.login');
+})->name('login');
 
-Route::get('/login', [PortalController::class, 'login'])->name('login');
-Route::post('/login', [PortalController::class, 'doLogin']);
-Route::post('/logout', [PortalController::class, 'logout'])->name('logout');
+Route::post('/login', [PortalController::class, 'loginAction'])->name('login.action');
+
+Route::post('/logout', function () {
+    Auth::logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+    return redirect('/');
+})->name('logout');
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/portal', [PortalController::class, 'index'])->name('portal');
-    Route::get('/portal/search', [PortalController::class, 'search'])->name('portal.search');
-    Route::get('/link/{link}', [PortalController::class, 'redirectToLink'])->name('link.redirect');
-    Route::get('/profile', [PortalController::class, 'editProfile'])->name('portal.profile');
-    Route::put('/profile', [PortalController::class, 'updateProfile'])->name('portal.profile.update');
+    Route::get('/home', function() {
+            return redirect()->route('portal.index');
+        });
+    Route::get('/portal', [PortalController::class, 'index'])->name('portal.index');
+    Route::get('/portal/profile', [PortalController::class, 'profile'])->name('portal.profile');
+    Route::get('/link/{link}', [PortalController::class, 'redirect'])->name('link.redirect');
 });
 
 
