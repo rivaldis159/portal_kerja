@@ -11,7 +11,7 @@
 
     <nav class="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200">
         <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-            <a href="{{ route('portal') }}" class="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition group">
+            <a href="{{ route('portal.index') }}" class="flex items-center gap-2 text-gray-600 hover:text-blue-600 transition group">
                 <div class="p-1.5 rounded-lg group-hover:bg-blue-50 transition">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                 </div>

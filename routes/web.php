@@ -23,10 +23,16 @@ Route::post('/logout', function () {
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/home', function() {
-            return redirect()->route('portal.index');
-        });
+        return redirect()->route('portal.index');
+    });
+
     Route::get('/portal', [PortalController::class, 'index'])->name('portal.index');
+    
+    // Rute Profile (Tampilan & Aksi Update)
     Route::get('/portal/profile', [PortalController::class, 'profile'])->name('portal.profile');
+    // Tambahkan baris ini agar form update profil berfungsi:
+    Route::put('/portal/profile', [PortalController::class, 'updateProfile'])->name('portal.profile.update');
+    
     Route::get('/link/{link}', [PortalController::class, 'redirect'])->name('link.redirect');
 });
 
