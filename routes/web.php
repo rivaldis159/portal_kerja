@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Auth;
 Route::get('/', function () {
     return redirect('/login');
 });
-// Portal routes
+
 Route::get('/login', [PortalController::class, 'login'])->name('login');
 Route::post('/login', [PortalController::class, 'doLogin']);
 Route::post('/logout', [PortalController::class, 'logout'])->name('logout');
@@ -16,9 +16,11 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/portal', [PortalController::class, 'index'])->name('portal');
     Route::get('/portal/search', [PortalController::class, 'search'])->name('portal.search');
     Route::get('/link/{link}', [PortalController::class, 'redirectToLink'])->name('link.redirect');
+    Route::get('/profile', [PortalController::class, 'editProfile'])->name('portal.profile');
+    Route::put('/profile', [PortalController::class, 'updateProfile'])->name('portal.profile.update');
 });
 
-// API route untuk search suggestions
+
 Route::get('/api/search-links', function() {
     $query = request('q');
     $user = Auth::user();

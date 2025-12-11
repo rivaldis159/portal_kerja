@@ -9,138 +9,147 @@
 </head>
 <body class="bg-gray-50">
     <!-- Header -->
-    <header class="bg-white shadow-sm">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center py-4">
-                <!-- Logo dan Title -->
-                <div class="flex items-center">
-                    <!-- LOGO -->
-                    <img src="/images/logo.png" alt="Logo" class="h-10 mr-3">
-                    <h1 class="text-2xl font-bold text-gray-900">Portal Kerja BPS Kabupaten Dairi</h1>
-                </div>
-
-                <!-- Search Box -->
-                <!-- Search Box dengan Suggestions -->
-                <form action="{{ route('portal.search') }}" method="GET" class="flex-1 max-w-md mx-8 relative" x-data="searchBox()">
-                    <input
-                        type="text"
-                        name="q"
-                        x-model="query"
-                        @input="search()"
-                        @focus="showDropdown = true"
-                        @click.away="showDropdown = false"
-                        placeholder="Cari link..."
-                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-
-                    <!-- Dropdown Suggestions -->
-                    <div
-                        x-show="showDropdown && (results.length > 0 || (query.length > 0 && !loading))"
-                        x-transition
-                        class="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-96 overflow-y-auto z-50">
-
-                        <!-- Loading -->
-                        <div x-show="loading" class="p-4 text-center text-gray-500">
-                            <svg class="animate-spin h-5 w-5 mx-auto" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
+    <header class="bg-white shadow-sm sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-20">
+                    
+                    <div class="flex items-center gap-3 w-1/3 justify-start">
+                        <img src="/images/logo.png" alt="Logo" class="h-10 w-auto">
+                        <div class="flex flex-col">
+                            <h1 class="text-xl font-bold text-gray-900 leading-tight">Portal Kerja</h1>
+                            <span class="text-sm font-medium text-blue-600">BPS Kabupaten Dairi</span>
                         </div>
+                    </div>
 
-                        <!-- Results -->
-                        <div x-show="!loading && results.length > 0">
-                            <template x-for="link in results" :key="link.id">
-                                <a
-                                    :href="'/link/' + link.id"
-                                    target="_blank"
-                                    @click="showDropdown = false"
-                                    class="flex items-start p-3 hover:bg-gray-50 border-b border-gray-100 last:border-0">
-                                    <div class="flex-shrink-0 mr-3">
-                                        <div class="w-8 h-8 rounded" :style="'background-color: ' + link.color"></div>
-                                    </div>
-                                    <div class="flex-1 min-w-0">
-                                        <h4 class="text-sm font-medium text-gray-900" x-text="link.title"></h4>
-                                        <p class="text-xs text-gray-500 mt-0.5" x-text="link.description"></p>
-                                        <div class="flex items-center mt-1 text-xs text-gray-400">
-                                            <span x-text="link.team_name"></span>
-                                            <span class="mx-1" x-show="link.category_name">•</span>
-                                            <span x-text="link.category_name"></span>
-                                        </div>
-                                    </div>
-                                </a>
-                            </template>
-
-                            <!-- Show More Link -->
-                            <div class="p-3 bg-gray-50 text-center border-t">
-                                <button type="submit" class="text-sm text-blue-600 hover:text-blue-800">
-                                    Lihat semua hasil untuk "<span x-text="query"></span>" →
-                                </button>
+                    <div class="flex justify-center w-1/3">
+                        <form action="{{ route('portal.search') }}" method="GET" class="w-full max-w-lg relative" x-data="searchBox()">
+                            <div class="relative group">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                    </svg>
+                                </div>
+                                <input
+                                    type="text"
+                                    name="q"
+                                    x-model="query"
+                                    @input="search()"
+                                    @focus="showDropdown = true"
+                                    @click.away="showDropdown = false"
+                                    placeholder="Cari link..."
+                                    class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-full focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 focus:bg-white transition-all duration-200"
+                                    autocomplete="off"
+                                >
                             </div>
-                        </div>
 
-                        <!-- No Results -->
-                        <div x-show="!loading && results.length === 0 && query.length > 0" class="p-4 text-center text-gray-500">
-                            <p>Tidak ada hasil untuk "<span x-text="query"></span>"</p>
-                            <button type="submit" class="mt-2 text-sm text-blue-600 hover:text-blue-800">
-                                Coba pencarian lengkap →
+                            <div
+                                x-show="showDropdown && (results.length > 0 || (query.length > 0 && !loading))"
+                                x-transition:enter="transition ease-out duration-200"
+                                x-transition:enter-start="opacity-0 translate-y-1"
+                                x-transition:enter-end="opacity-100 translate-y-0"
+                                class="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-100 max-h-96 overflow-y-auto z-50 divide-y divide-gray-100">
+
+                                <div x-show="loading" class="p-4 text-center text-gray-500">
+                                    <svg class="animate-spin h-5 w-5 mx-auto text-blue-500" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span class="text-xs mt-1 block">Mencari...</span>
+                                </div>
+
+                                <div x-show="!loading && results.length > 0">
+                                    <template x-for="link in results" :key="link.id">
+                                        <a :href="'/link/' + link.id" target="_blank" class="flex items-start p-3 hover:bg-blue-50 transition-colors">
+                                            <div class="flex-shrink-0 mr-3 mt-1">
+                                                <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shadow-sm" 
+                                                    :style="'background-color: ' + (link.color || '#3B82F6')">
+                                                    <span x-text="link.title.substring(0,1).toUpperCase()"></span>
+                                                </div>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <h4 class="text-sm font-semibold text-gray-900" x-text="link.title"></h4>
+                                                <p class="text-xs text-gray-500 mt-0.5 line-clamp-1" x-text="link.description || 'Tidak ada deskripsi'"></p>
+                                                <div class="flex items-center gap-2 mt-1.5">
+                                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-gray-100 text-gray-600" x-text="link.team_name"></span>
+                                                    <span x-show="link.category_name" class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-600" x-text="link.category_name"></span>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </template>
+                                    <div class="p-2 bg-gray-50 text-center border-t border-gray-100">
+                                        <button type="submit" class="text-xs font-medium text-blue-600 hover:text-blue-800 transition-colors">
+                                            Lihat semua hasil pencarian &rarr;
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div x-show="!loading && results.length === 0 && query.length > 0" class="p-8 text-center">
+                                    <p class="text-gray-500 text-sm">Tidak ditemukan hasil untuk "<span x-text="query" class="font-medium text-gray-900"></span>"</p>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="flex items-center justify-end gap-4 w-1/3">
+                        <a href="{{ route('portal.profile') }}" class="flex items-center gap-3 group hover:opacity-80 transition-opacity">
+                            <div class="hidden md:block text-right">
+                                <div class="text-sm font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">{{ Auth::user()->name }}</div>
+                                <div class="text-xs text-gray-500">{{ Auth::user()->email }}</div>
+                            </div>
+                            
+                            <div class="h-9 w-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold shadow-md ring-2 ring-white group-hover:ring-blue-100 transition-all">
+                                {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
+                            </div>
+                        </a>
+
+                        <div class="h-6 w-px bg-gray-300 mx-1"></div>
+
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-all duration-200" title="Keluar Aplikasi">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                </svg>
                             </button>
-                        </div>
+                        </form>
                     </div>
-                </form>
 
-                <!-- Alpine.js Script -->
-                <script src="//unpkg.com/alpinejs" defer></script>
-                <script>
-                function searchBox() {
-                    return {
-                        query: '',
-                        results: [],
-                        showDropdown: false,
-                        loading: false,
-                        searchTimeout: null,
-
-                        search() {
-                            clearTimeout(this.searchTimeout);
-
-                            if (this.query.length < 2) {
-                                this.results = [];
-                                return;
-                            }
-
-                            this.loading = true;
-
-                            this.searchTimeout = setTimeout(() => {
-                                fetch(`/api/search-links?q=${encodeURIComponent(this.query)}`)
-                                    .then(response => response.json())
-                                    .then(data => {
-                                        this.results = data.slice(0, 5); // Hanya tampilkan 5 hasil teratas
-                                        this.loading = false;
-                                    })
-                                    .catch(() => {
-                                        this.loading = false;
-                                    });
-                            }, 300); // Delay 300ms untuk mengurangi request
-                        }
-                    }
-                }
-                </script>
-                <!-- User Menu -->
-                <div class="flex items-center space-x-4">
-                    <div class="flex items-center">
-                        <!-- User Avatar (optional) -->
-                        <div class="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white mr-2">
-                            {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
-                        </div>
-                        <span class="text-sm text-gray-600">{{ Auth::user()->name }}</span>
-                    </div>
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit" class="text-sm text-red-600 hover:text-red-800">
-                            Logout
-                        </button>
-                    </form>
                 </div>
             </div>
-        </div>
+        </header>
+
+        <script src="//unpkg.com/alpinejs" defer></script>
+        <script>
+        function searchBox() {
+            return {
+                query: '',
+                results: [],
+                showDropdown: false,
+                loading: false,
+                searchTimeout: null,
+
+                search() {
+                    clearTimeout(this.searchTimeout);
+                    if (this.query.length < 2) {
+                        this.results = [];
+                        return;
+                    }
+                    this.loading = true;
+                    this.searchTimeout = setTimeout(() => {
+                        fetch(`/api/search-links?q=${encodeURIComponent(this.query)}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                this.results = data.slice(0, 5); 
+                                this.loading = false;
+                            })
+                            .catch(() => {
+                                this.loading = false;
+                            });
+                    }, 300);
+                }
+            }
+        }
+        </script>
     </header>
 
 

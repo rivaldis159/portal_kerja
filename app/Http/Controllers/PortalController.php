@@ -7,6 +7,8 @@ use App\Models\Link;
 use App\Models\Announcement;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 
 class PortalController
 {
@@ -17,7 +19,6 @@ class PortalController
             $user->updateLastLogin();
         }
 
-        // Get user's teams with active links
         $teams = $user->teams()
             ->with(['links' => function ($query) {
                 $query->where('is_active', true)
@@ -26,10 +27,9 @@ class PortalController
             }])
             ->get();
 
-        // Get announcements (global + team-specific)
         $teamIds = $teams->pluck('id');
         $announcements = Announcement::active()
-            ->with('team') // <--- TAMBAHKAN INI (Eager Load)
+            ->with('team')
             ->where(function ($query) use ($teamIds) {
                 $query->whereNull('team_id')
                     ->orWhereIn('team_id', $teamIds);
@@ -38,9 +38,8 @@ class PortalController
             ->take(5)
             ->get();
 
-        // Get most used links for quick access
        $recentLinks = Link::active()
-            ->with('category') // <--- TAMBAHKAN INI (Eager Load Category)
+            ->with('category')
             ->whereIn('team_id', $teamIds)
             ->withCount(['accessLogs as recent_clicks' => function ($query) use ($user) {
                 $query->where('user_id', $user->id)
@@ -58,18 +57,15 @@ class PortalController
         $link = Link::findOrFail($linkId);
         $user = Auth::user();
 
-        // Check if user has access to this link
         if (!$user->teams()->where('teams.id', $link->team_id)->exists()) {
             abort(403, 'Unauthorized access to this link.');
         }
 
-        // Log the access
         $link->logAccess($user);
 
         return redirect()->away($link->url);
     }
 
-    // Existing login methods...
     public function login()
     {
         return view('portal.login');
@@ -99,18 +95,16 @@ class PortalController
     {
         $query = $request->input('q');
 
-        // Optimasi: Tambahkan with('team', 'category')
         $links = Link::active()
-            ->with(['team', 'category']) // <--- Eager Loading (PENTING)
+            ->with(['team', 'category'])
             ->where(function($q) use ($query) {
                 $q->where('title', 'like', "%{$query}%")
                 ->orWhere('description', 'like', "%{$query}%");
             })
             ->get();
 
-        // Optimasi: Tambahkan with('team')
         $announcements = Announcement::active()
-            ->with('team') // <--- Eager Loading (PENTING)
+            ->with('team')
             ->where(function($q) use ($query) {
                 $q->where('title', 'like', "%{$query}%")
                 ->orWhere('content', 'like', "%{$query}%");
@@ -118,5 +112,34 @@ class PortalController
             ->get();
 
         return view('portal.search', compact('links', 'announcements', 'query'));
+    }
+
+    public function editProfile()
+    {
+        return view('portal.profile', [
+            'user' => Auth::user()
+        ]);
+    }
+
+    public function updateProfile(Request $request)
+    {
+        $user = Auth::user();
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $user->name = $validated['name'];
+        $user->email = $validated['email'];
+
+        if ($request->filled('password')) {
+            $user->password = Hash::make($validated['password']);
+        }
+
+        $user->save();
+
+        return back()->with('success', 'Profil berhasil diperbarui!');
     }
 }
