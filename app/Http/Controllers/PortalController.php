@@ -14,42 +14,16 @@ class PortalController
 {
     public function index()
     {
-        $user = Auth::user();
-        if ($user->last_login < now()->startOfDay()) {
-            $user->updateLastLogin();
-        }
+        // 1. Ambil data Team, Link, dan Kategori sekaligus (Eager Loading)
+        $teams = Team::with(['links' => function($query) {
+            $query->orderBy('category_id')->orderBy('title');
+        }, 'links.category'])->get();
 
-        $teams = $user->teams()
-            ->with(['links' => function ($query) {
-                $query->where('is_active', true)
-                    ->with('category')
-                    ->orderBy('order');
-            }])
-            ->get();
+        // 2. Ambil 5 pengumuman terbaru
+        $announcements = Announcement::latest()->where('is_active', true)->take(5)->get();
 
-        $teamIds = $teams->pluck('id');
-        $announcements = Announcement::active()
-            ->with('team')
-            ->where(function ($query) use ($teamIds) {
-                $query->whereNull('team_id')
-                    ->orWhereIn('team_id', $teamIds);
-            })
-            ->orderByRaw("FIELD(priority, 'urgent', 'high', 'normal', 'low')")
-            ->take(5)
-            ->get();
-
-       $recentLinks = Link::active()
-            ->with('category')
-            ->whereIn('team_id', $teamIds)
-            ->withCount(['accessLogs as recent_clicks' => function ($query) use ($user) {
-                $query->where('user_id', $user->id)
-                    ->where('accessed_at', '>=', now()->subDays(7));
-            }])
-            ->orderBy('recent_clicks', 'desc')
-            ->take(8)
-            ->get();
-
-        return view('portal.index', compact('teams', 'announcements', 'recentLinks'));
+        // 3. Kirim ke view
+        return view('portal.index', compact('teams', 'announcements'));
     }
 
     public function redirectToLink($linkId)

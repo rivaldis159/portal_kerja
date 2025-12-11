@@ -35,7 +35,6 @@ class User extends Authenticatable implements FilamentUser // TAMBAH implements 
         'password' => 'hashed',
     ];
 
-    // Relationships
     public function teams()
     {
         return $this->belongsToMany(Team::class)->withPivot('joined_at')->withTimestamps();
@@ -46,13 +45,16 @@ class User extends Authenticatable implements FilamentUser // TAMBAH implements 
         return $this->hasMany(AccessLog::class);
     }
 
-    // Scopes
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
     }
 
-    // Methods
+    public function isSuperAdmin()
+    {
+        return $this->role === 'super_admin';
+    }
+
     public function isAdmin()
     {
         return $this->role === 'admin';
@@ -63,13 +65,12 @@ class User extends Authenticatable implements FilamentUser // TAMBAH implements 
         $this->update(['last_login' => now()]);
     }
 
-    // TAMBAH METHOD INI UNTUK FILAMENT ACCESS
-    public function canAccessPanel(Panel $panel): bool
+    public function canAccessPanel(\Filament\Panel $panel): bool
     {
-        Log::info('Checking panel access for user: ' . $this->email);
-        Log::info('Role: ' . $this->role);
-        Log::info('Is Active: ' . $this->is_active);
-
-        return $this->role === 'admin' && $this->is_active;
+        // Izinkan jika role-nya ada isinya (super_admin atau admin_tim)
+        return ! is_null($this->role);
+        
+        // ATAU jika ingin lebih spesifik:
+        // return in_array($this->role, ['super_admin', 'admin_tim']);
     }
 }

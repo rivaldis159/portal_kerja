@@ -9,6 +9,8 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Filament\Forms\Components\Select;
+use Illuminate\Database\Eloquent\Builder;
 
 class TeamResource extends Resource
 {
@@ -28,9 +30,27 @@ class TeamResource extends Resource
                     ->columnSpanFull(),
                 Forms\Components\ColorPicker::make('color')
                     ->default('#3b82f6'),
-                Forms\Components\TextInput::make('icon')
-                    ->placeholder('heroicon-o-briefcase')
-                    ->maxLength(50),
+                Select::make('icon')
+                    ->label('Pilih Icon')
+                    ->searchable()
+                    ->options([
+                        'heroicon-o-home' => 'Home / Rumah',
+                        'heroicon-o-user' => 'User / Orang',
+                        'heroicon-o-users' => 'Users / Tim',
+                        'heroicon-o-document-text' => 'Dokumen',
+                        'heroicon-o-folder' => 'Folder',
+                        'heroicon-o-briefcase' => 'Tas Kerja / Dinas',
+                        'heroicon-o-chart-bar' => 'Statistik / Grafik',
+                        'heroicon-o-computer-desktop' => 'Komputer / Aplikasi',
+                        'heroicon-o-globe-alt' => 'Globe / Internet',
+                        'heroicon-o-link' => 'Tautan / Link',
+                        'heroicon-o-cloud' => 'Cloud / Awan',
+                        'heroicon-o-calculator' => 'Kalkulator / Hitung',
+                        'heroicon-o-calendar' => 'Kalender',
+                        'heroicon-o-clipboard-document-check' => 'Ceklis / Survei',
+                        // Tambahkan icon Heroicons v2 lainnya sesuai kebutuhan
+                    ])
+                    ->helperText('Pilih icon yang sesuai dengan tim/link ini.'),
                 Forms\Components\Select::make('users')
                     ->relationship('users', 'name')
                     ->multiple()
@@ -75,5 +95,18 @@ class TeamResource extends Resource
             'create' => Pages\CreateTeam::route('/create'),
             'edit' => Pages\EditTeam::route('/{record}/edit'),
         ];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        if (auth()->user()->role !== 'super_admin') {
+            $query->whereHas('users', function ($q) {
+                $q->where('user_id', auth()->id());
+            });
+        }
+
+        return $query;
     }
 }
