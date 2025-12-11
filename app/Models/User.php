@@ -67,10 +67,6 @@ class User extends Authenticatable implements FilamentUser // TAMBAH implements 
 
     public function canAccessPanel(\Filament\Panel $panel): bool
     {
-        // Izinkan jika role-nya ada isinya (super_admin atau admin_tim)
-        return ! is_null($this->role);
-        
-        // ATAU jika ingin lebih spesifik:
-        // return in_array($this->role, ['super_admin', 'admin_tim']);
+        return in_array($this->role, ['super_admin', 'admin_tim']);
     }
 }

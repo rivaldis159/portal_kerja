@@ -12,19 +12,21 @@ class AccessLogStats extends BaseWidget
     protected function getStats(): array
     {
         return [
-            Stat::make('Akses Hari Ini', AccessLog::whereDate('created_at', Carbon::today())->count())
+            // Ganti 'created_at' menjadi 'accessed_at'
+            Stat::make('Akses Hari Ini', AccessLog::whereDate('accessed_at', Carbon::today())->count())
                 ->description('Jumlah klik hari ini')
                 ->descriptionIcon('heroicon-m-arrow-trending-up')
                 ->color('success'),
 
-            Stat::make('Akses Bulan Ini', AccessLog::whereMonth('created_at', Carbon::now()->month)->count())
+            // Ganti 'created_at' menjadi 'accessed_at'
+            Stat::make('Akses Bulan Ini', AccessLog::whereMonth('accessed_at', Carbon::now()->month)->count())
                 ->description('Total klik bulan ' . Carbon::now()->format('F'))
                 ->descriptionIcon('heroicon-m-calendar')
                 ->color('info'),
 
             Stat::make('Total Semua Akses', AccessLog::count())
                 ->description('Akumulasi sejak awal')
-                ->chart([7, 2, 10, 3, 15, 4, 17]) // Dummy chart untuk visual
+                ->chart([7, 2, 10, 3, 15, 4, 17]) 
                 ->color('primary'),
         ];
     }

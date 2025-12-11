@@ -36,8 +36,9 @@ class UserResource extends Resource
                     ->required(fn (string $context): bool => $context === 'create'),
                 Forms\Components\Select::make('role')
                     ->options([
-                        'admin' => 'Admin',
-                        'user' => 'User',
+                        'super_admin' => 'Super Admin',
+                        'admin_tim' => 'Admin Tim',
+                        'user' => 'User Biasa',
                     ])
                     ->default('user')
                     ->required(),
@@ -60,9 +61,16 @@ class UserResource extends Resource
                     ->searchable(),
                 Tables\Columns\BadgeColumn::make('role')
                     ->colors([
-                        'danger' => 'admin',
+                        'danger' => 'super_admin',
+                        'info' => 'admin_tim',
                         'success' => 'user',
-                    ]),
+                    ])
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'super_admin' => 'Super Admin',
+                        'admin_tim' => 'Admin Tim',
+                        'user' => 'User Biasa',
+                        default => $state,
+                    }),
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean(),
                 Tables\Columns\TextColumn::make('teams.name')
@@ -76,8 +84,9 @@ class UserResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('role')
                     ->options([
-                        'admin' => 'Admin',
-                        'user' => 'User',
+                        'super_admin' => 'Super Admin',
+                        'admin_tim' => 'Admin Tim',
+                        'user' => 'User Biasa',
                     ]),
             ])
             ->actions([

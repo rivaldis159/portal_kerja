@@ -56,6 +56,11 @@ class LinkResource extends Resource
                         Forms\Components\Toggle::make('open_new_tab')
                             ->default(true),
                     ]),
+                Forms\Components\Toggle::make('is_public')
+                    ->label('Link Publik?')
+                    ->helperText('Aktifkan jika link ini boleh dilihat oleh user dari tim lain.')
+                    ->default(false)
+                    ->columnSpanFull(),
             ]);
     }
 
@@ -76,6 +81,14 @@ class LinkResource extends Resource
                 Tables\Columns\ColorColumn::make('color'),
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean(),
+                Tables\Columns\IconColumn::make('is_public')
+                    ->label('Publik')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-globe-alt')
+                    ->falseIcon('heroicon-o-lock-closed')
+                    ->trueColor('success')
+                    ->falseColor('gray')
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('order')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('accessLogs_count')

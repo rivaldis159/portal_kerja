@@ -18,16 +18,17 @@ class Link extends Model
         'icon',
         'color',
         'is_active',
+        'is_public',
         'order',
         'open_new_tab',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
+        'is_public' => 'boolean',
         'open_new_tab' => 'boolean',
     ];
 
-    // Relationships
     public function team()
     {
         return $this->belongsTo(Team::class);
@@ -78,5 +79,24 @@ class Link extends Model
         }
 
         return $query->count();
+    }
+
+    public function scopeVisibleToUser($query, $user)
+    {
+        // Jika tidak login (Guest), hanya link publik
+        if (!$user) {
+            return $query->where('is_public', true);
+        }
+
+        // Jika Super Admin, lihat semua (Opsional, hapus if ini jika super admin juga terbatas)
+        if ($user->role === 'super_admin') {
+            return $query;
+        }
+
+        // User Biasa/Admin Tim: Link Publik ATAU Link milik tim user tersebut
+        return $query->where(function ($q) use ($user) {
+            $q->where('is_public', true)
+            ->orWhereIn('team_id', $user->teams->pluck('id'));
+        });
     }
 }

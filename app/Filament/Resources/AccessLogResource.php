@@ -27,7 +27,8 @@ class AccessLogResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('created_at')
+                // Ganti 'created_at' menjadi 'accessed_at'
+                Tables\Columns\TextColumn::make('accessed_at') 
                     ->label('Waktu Akses')
                     ->dateTime('d M Y, H:i:s')
                     ->sortable(),
@@ -53,18 +54,19 @@ class AccessLogResource extends Resource
                     ->limit(30)
                     ->tooltip(fn ($record) => $record->user_agent),
             ])
-            ->defaultSort('created_at', 'desc')
+            // Ganti default sort ke 'accessed_at'
+            ->defaultSort('accessed_at', 'desc') 
             ->filters([
-                // Filter berdasarkan Tanggal
-                Tables\Filters\Filter::make('created_at')
+                Tables\Filters\Filter::make('accessed_at') // Ubah nama filter agar konsisten (opsional tapi rapi)
                     ->form([
                         Forms\Components\DatePicker::make('created_from')->label('Dari Tanggal'),
                         Forms\Components\DatePicker::make('created_until')->label('Sampai Tanggal'),
                     ])
                     ->query(function ($query, array $data) {
                         return $query
-                            ->when($data['created_from'], fn ($q) => $q->whereDate('created_at', '>=', $data['created_from']))
-                            ->when($data['created_until'], fn ($q) => $q->whereDate('created_at', '<=', $data['created_until']));
+                            // Ganti kolom query menjadi 'accessed_at'
+                            ->when($data['created_from'], fn ($q) => $q->whereDate('accessed_at', '>=', $data['created_from']))
+                            ->when($data['created_until'], fn ($q) => $q->whereDate('accessed_at', '<=', $data['created_until']));
                     })
             ]);
     }

@@ -14,15 +14,22 @@ class PortalController
 {
     public function index()
     {
-        // 1. Ambil data Team, Link, dan Kategori sekaligus (Eager Loading)
-        $teams = Team::with(['links' => function($query) {
-            $query->orderBy('category_id')->orderBy('title');
-        }, 'links.category'])->get();
+        $user = Auth::user();
 
-        // 2. Ambil 5 pengumuman terbaru
-        $announcements = Announcement::latest()->where('is_active', true)->take(5)->get();
+        $teams = Team::whereHas('links', function ($query) use ($user) {
+            $query->visibleToUser($user)->where('is_active', true);
+        })
+        ->with(['links' => function ($query) use ($user) {
+            $query->visibleToUser($user)
+                ->where('is_active', true)
+                ->orderBy('order') // <--- Ganti jadi 'order'
+                ->with('category');
+        }])
+        ->orderBy('name')
+        ->get();
 
-        // 3. Kirim ke view
+        $announcements = Announcement::latest()->take(5)->get();
+
         return view('portal.index', compact('teams', 'announcements'));
     }
 
