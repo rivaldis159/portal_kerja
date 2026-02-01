@@ -155,51 +155,134 @@ class PortalController extends Controller
 
     public function stats(Request $request)
     {
-        // 1. Data Tabel Pegawai (dengan Pencarian)
+        // --- LOGIKA UTAMA TABEL & SORTING ---
         $query = \App\Models\User::query()
             ->with(['employeeDetail', 'teams'])
-            ->where('role', '!=', 'super_admin'); // Sembunyikan akun super admin
+            ->where('role', '!=', 'super_admin');
 
-        if ($request->has('search')) {
+        // Filter Pencarian
+        if ($request->has('search') && $request->search != '') {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhereHas('employeeDetail', function ($sub) use ($search) {
                         $sub->where('nip', 'like', "%{$search}%")
+                            ->orWhere('nip_lama', 'like', "%{$search}%")
                             ->orWhere('jabatan', 'like', "%{$search}%");
                     });
             });
         }
 
-        $employees = $query->paginate(10);
+        $sortColumn = $request->get('sort', 'name');
+        $sortDirection = $request->get('direction', 'asc');
 
-        // 2. Data Statistik untuk Grafik
+        // JOIN table detail agar bisa sort kolom jabatan/nip
+        $query->select('users.*')
+            ->leftJoin('employee_details', 'users.id', '=', 'employee_details.user_id');
 
-        // A. Grafik Jabatan (Pie Chart)
-        $jabatanStats = \App\Models\EmployeeDetail::select('jabatan', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
-            ->whereNotNull('jabatan')
-            ->groupBy('jabatan')
-            ->pluck('total', 'jabatan')
-            ->toArray();
+        if ($sortColumn === 'name') {
+            // 1. Sort Pegawai (Abjad Nama)
+            $query->orderBy('users.name', $sortDirection);
+        } elseif ($sortColumn === 'jabatan') {
+            // 2. Sort Jabatan (CUSTOM ORDER SESUAI PERMINTAAN)
+            $jabatanOrder = [
+                'Kepala BPS Kabupaten Dairi',
+                'Kepala Subbagian Umum',
+                'Penata Laksana Barang Terampil',
+                'Analis Pengelola Keuangan APBN Ahli Muda',
+                'Pranata Keuangan APBN Mahir',
+                'Analis Anggaran Ahli Muda',
+                'Analis Anggaran Ahli Pertama',
+                'Pustakawan Mahir',
+                'Pustakawan Terampil',
+                'Pengelola Barang Milik Negara',
+                'Pengolah Data',
+                'Pranata Kearsipan',
+                'Statistisi Ahli Madya',
+                'Statistisi Ahli Muda',
+                'Statistisi Ahli Pertama',
+                'Statistisi Mahir',
+                'Statistisi Terampil',
+                'Pranata Komputer Ahli Madya',
+                'Pranata Komputer Ahli Muda',
+                'Pranata Komputer Ahli Pertama',
+                'Pranata Komputer Penyelia',
+                'Pranata Komputer Mahir',
+                'Pranata Komputer Terampil',
+                'Pengolah Data'
+            ];
 
-        // B. Grafik Pangkat/Golongan (Bar Chart)
-        $golonganStats = \App\Models\EmployeeDetail::select('pangkat_golongan', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
-            ->whereNotNull('pangkat_golongan')
-            ->orderBy('pangkat_golongan')
-            ->groupBy('pangkat_golongan')
-            ->pluck('total', 'pangkat_golongan')
-            ->toArray();
+            // Ubah array jadi string untuk query SQL
+            $orderByString = "'" . implode("','", $jabatanOrder) . "'";
 
-        // C. Total Data Ringkas
+            // Field yang tidak ada di list akan ditaruh di urutan terakhir
+            $query->orderByRaw("FIELD(employee_details.jabatan, $orderByString) " . $sortDirection);
+        } elseif ($sortColumn === 'masa_kerja') {
+            // 3. Sort Masa Kerja (Berdasarkan TMT di dalam NIP)
+            // Kita ambil digit ke-9 sebanyak 6 karakter (YYYYMM TMT)
+            // Logic:
+            // - Jika ASC (Lama): Kita cari TMT tahun 'kecil' (misal 1998) -> ASC
+            // - Jika DESC (Baru): Kita cari TMT tahun 'besar' (misal 2024) -> DESC
+
+            $query->orderByRaw("SUBSTRING(employee_details.nip, 9, 6) " . $sortDirection);
+        }
+
+        $employees = $query->paginate(20)->withQueryString();
+
+        // --- BAGIAN STATISTIK GRAFIK (TETAP SAMA) ---
+        $allDetails = \App\Models\EmployeeDetail::all();
+
+        $jabatanStats = $allDetails->groupBy('jabatan')->map->count()->toArray();
+        $golonganStats = $allDetails->groupBy('pangkat_golongan')->map->count()->sortKeys()->toArray();
+        $pendidikanStats = $allDetails->groupBy('pendidikan_strata')->map->count()->toArray();
+
+        $umurStats = ['< 30 Thn' => 0, '30-40 Thn' => 0, '41-50 Thn' => 0, '> 50 Thn' => 0];
+        $masaKerjaStats = ['< 5 Thn' => 0, '5-10 Thn' => 0, '10-20 Thn' => 0, '> 20 Thn' => 0];
+
+        foreach ($allDetails as $d) {
+            // Hitung Umur
+            if ($d->tanggal_lahir) {
+                $age = \Carbon\Carbon::parse($d->tanggal_lahir)->age;
+                if ($age < 30) $umurStats['< 30 Thn']++;
+                elseif ($age <= 40) $umurStats['30-40 Thn']++;
+                elseif ($age <= 50) $umurStats['41-50 Thn']++;
+                else $umurStats['> 50 Thn']++;
+            }
+
+            // Hitung Masa Kerja
+            if ($d->nip && strlen($d->nip) == 18) {
+                $tmtString = substr($d->nip, 8, 6);
+                try {
+                    $tmtDate = \Carbon\Carbon::createFromFormat('Ym', $tmtString);
+                    $years = $tmtDate->diffInYears(now());
+
+                    if ($years < 5) $masaKerjaStats['< 5 Thn']++;
+                    elseif ($years <= 10) $masaKerjaStats['5-10 Thn']++;
+                    elseif ($years <= 20) $masaKerjaStats['10-20 Thn']++;
+                    else $masaKerjaStats['> 20 Thn']++;
+                } catch (\Exception $e) {
+                }
+            }
+        }
+
+        $birthdayUsers = \App\Models\User::whereHas('employeeDetail', function ($q) {
+            $q->whereMonth('tanggal_lahir', now()->month);
+        })->with('employeeDetail')->get();
+
         $totalPegawai = \App\Models\User::where('role', '!=', 'super_admin')->count();
-        $totalTim = \App\Models\Team::count();
+        $avgAge = $allDetails->filter(fn($i) => $i->tanggal_lahir)->map(fn($i) => \Carbon\Carbon::parse($i->tanggal_lahir)->age)->avg();
+        $avgAge = round($avgAge ?: 0);
 
         return view('portal.stats', compact(
             'employees',
             'jabatanStats',
             'golonganStats',
+            'pendidikanStats',
+            'umurStats',
+            'masaKerjaStats',
+            'birthdayUsers',
             'totalPegawai',
-            'totalTim'
+            'avgAge'
         ));
     }
 }
