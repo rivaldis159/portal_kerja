@@ -11,21 +11,33 @@ use App\Models\Team;
 
 class PortalController extends Controller
 {
-    // 1. Halaman Utama
     public function index()
     {
         $user = auth()->user();
-        $teams = Team::all();
+        
+        // Ambil ID & Nama Tim untuk filter dropdown (jika perlu)
+        $teams = Team::select('id', 'name')->get();
 
         $categories = Category::where('is_active', true)
             ->with(['links' => function($query) use ($user) {
                 $query->where('is_active', true)
                       ->where(function($q) use ($user) {
+                          // 1. Link Pusat (Semua bisa lihat)
                           $q->where('is_bps_pusat', true);
+                          
                           if ($user) {
-                              $q->orWhere('team_id', $user->team_id);
+                              // 2. Link Tim Sendiri (MULTIPLE TEAMS)
+                              // Ambil semua ID tim yang diikuti user
+                              $myTeamIds = $user->teams->pluck('id')->toArray();
+                              
+                              if (!empty($myTeamIds)) {
+                                  $q->orWhereIn('team_id', $myTeamIds);
+                              }
+
+                              // 3. Link Publik dari tim lain
                               $q->orWhere('is_public', true);
                           } else {
+                              // Jika tamu, hanya lihat publik
                               $q->orWhere('is_public', true);
                           }
                       });
@@ -34,8 +46,9 @@ class PortalController extends Controller
 
         $announcements = collect(); 
         if ($user) {
+            $myTeamIds = $user->teams->pluck('id')->toArray();
             $announcements = Announcement::where('is_active', true)
-                ->where('team_id', $user->team_id)
+                ->whereIn('team_id', $myTeamIds) // Pengumuman dari semua tim yang diikuti
                 ->latest()
                 ->get();
         }
@@ -43,14 +56,12 @@ class PortalController extends Controller
         return view('portal.index', compact('categories', 'announcements', 'teams'));
     }
 
-    // 2. Login Form
     public function loginForm()
     {
         if (Auth::check()) return redirect('/');
         return view('portal.login');
     }
 
-    // 3. Proses Login
     public function loginAction(Request $request)
     {
         $credentials = $request->validate([
@@ -66,7 +77,6 @@ class PortalController extends Controller
         return back()->withErrors(['email' => 'Email atau password salah.'])->onlyInput('email');
     }
 
-    // 4. Logout
     public function logout(Request $request)
     {
         Auth::logout();
@@ -75,27 +85,21 @@ class PortalController extends Controller
         return redirect('/login');
     }
 
-    // 5. Tampilkan Profil
     public function profile()
     {
         $user = Auth::user();
-        // Load data detail pegawai jika ada
         $user->load('employeeDetail');
         return view('portal.profile', compact('user'));
     }
 
-    // 6. Simpan Profil (Update Lengkap)
-public function updateProfile(Request $request)
+    public function updateProfile(Request $request)
     {
         $user = Auth::user();
         
         $validated = $request->validate([
-            // User Login Data
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
             'password' => 'nullable|min:8|confirmed',
-            
-            // Employee Details
             'nip' => 'nullable|numeric|digits:18',
             'nip_lama' => 'nullable|numeric|digits:9',
             'pangkat_golongan' => 'nullable|string',
@@ -115,15 +119,13 @@ public function updateProfile(Request $request)
             'nomor_rekening' => 'nullable|string',
         ]);
 
-        // 1. Update User Utama
         $user->name = $validated['name'];
-        $user->email = $validated['email']; // Update email login
+        $user->email = $validated['email'];
         if (!empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
         }
         $user->save();
 
-        // 2. Update Detail Pegawai
         $user->employeeDetail()->updateOrCreate(
             ['user_id' => $user->id],
             [
@@ -144,11 +146,10 @@ public function updateProfile(Request $request)
                 'nama_pasangan' => $request->nama_pasangan,
                 'bank_name' => $request->bank_name,
                 'nomor_rekening' => $request->nomor_rekening,
-                // Kita gunakan email user utama sebagai email kantor juga
                 'email_kantor' => $validated['email'], 
             ]
         );
 
-        return back()->with('success', 'Data pegawai berhasil diperbarui.');
+        return back()->with('success', 'Profil berhasil diperbarui.');
     }
 }

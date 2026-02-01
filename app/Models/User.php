@@ -14,8 +14,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
-        'role',     // <--- Wajib ada
-        'team_id',  // <--- Wajib ada
+        'role',
+        // 'team_id', // Kita hapus ini karena sudah pakai tabel pivot team_user
     ];
 
     protected $hidden = [
@@ -31,17 +31,41 @@ class User extends Authenticatable
         ];
     }
 
-    // --- RELASI (PENTING) ---
-    public function team() {
-        return $this->belongsTo(Team::class);
+    // RELASI BARU: BISA BANYAK TIM
+    public function teams()
+    {
+        // withPivot('role') artinya kita ikut ambil kolom role dari tabel penghubung
+        return $this->belongsToMany(Team::class, 'team_user')
+            ->withPivot('role')
+            ->withTimestamps();
     }
 
-    public function employeeDetail() {
+    // Helper untuk cek apakah dia admin di tim tertentu
+    public function isTeamAdmin($teamId)
+    {
+        // Cek apakah di relasi teams, ada yg ID-nya sekian DAN role-nya 'admin'
+        return $this->teams()
+            ->where('team_id', $teamId)
+            ->wherePivot('role', 'admin')
+            ->exists();
+    }
+
+    public function employeeDetail()
+    {
         return $this->hasOne(EmployeeDetail::class);
     }
 
-    // --- HELPER ROLE (PENTING UNTUK FILAMENT) ---
-    public function isSuperAdmin() { return $this->role === 'super_admin'; }
-    public function isKepala() { return $this->role === 'kepala'; }
-    public function isAdminTim() { return $this->role === 'admin_tim'; }
+    // Helper Role
+    public function isSuperAdmin()
+    {
+        return $this->role === 'super_admin';
+    }
+    public function isKepala()
+    {
+        return $this->role === 'kepala';
+    }
+    public function isAdminTim()
+    {
+        return $this->role === 'admin_tim';
+    }
 }

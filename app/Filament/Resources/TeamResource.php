@@ -9,15 +9,15 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use App\Filament\Resources\TeamResource\RelationManagers;
 
 class TeamResource extends Resource
 {
     protected static ?string $model = Team::class;
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
-    
-    // KITA SATUKAN KE GRUP "Manajemen User"
-    protected static ?string $navigationGroup = 'Manajemen User'; 
-    protected static ?int $navigationSort = 2; // Urutan kedua setelah User
+    protected static ?string $navigationGroup = 'Manajemen User';
+    protected static ?string $navigationLabel = 'Data Tim';
+    protected static ?string $modelLabel = 'Tim';
 
     public static function form(Form $form): Form
     {
@@ -27,19 +27,41 @@ class TeamResource extends Resource
                     ->label('Nama Tim')
                     ->required()
                     ->maxLength(255),
+
+                // WARNA OTOMATIS & UNIK
                 Forms\Components\ColorPicker::make('color')
                     ->label('Warna Identitas')
-                    ->default('#3b82f6'),
+                    ->required()
+                    ->default(function () {
+                        // Loop sampai nemu warna yang belum dipakai
+                        do {
+                            $color = '#' . str_pad(dechex(mt_rand(0, 0xFFFFFF)), 6, '0', STR_PAD_LEFT);
+                        } while (Team::where('color', $color)->exists());
+                        return $color;
+                    }),
             ]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            // Daftarkan Relation Manager disini
+            RelationManagers\UsersRelationManager::class,
+        ];
     }
 
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')->searchable()->label('Nama Tim'),
-                Tables\Columns\ColorColumn::make('color')->label('Warna'),
-                Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable(),
+                Tables\Columns\TextColumn::make('name')
+                    ->label('Nama Tim')
+                    ->searchable(),
+                Tables\Columns\ColorColumn::make('color')
+                    ->label('Warna'),
+                Tables\Columns\TextColumn::make('users_count')
+                    ->counts('users')
+                    ->label('Jumlah Anggota'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

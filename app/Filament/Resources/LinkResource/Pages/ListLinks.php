@@ -22,15 +22,23 @@ class ListLinks extends ListRecords
     {
         $user = auth()->user();
 
-        // Super Admin & Kepala lihat semua
+        // 1. Super Admin / Kepala: Lihat Semua
         if ($user->isSuperAdmin() || $user->isKepala()) {
             return parent::getTableQuery();
         }
 
-        // Admin Tim lihat: Link timnya SENDIRI atau Link PUSAT
-        return parent::getTableQuery()->where(function($query) use ($user) {
-            $query->where('team_id', $user->team_id)
-                  ->orWhere('is_bps_pusat', true);
+        // 2. Pegawai Biasa:
+        // Logic Baru: Tampilkan Link milik tim dimana user ini menjadi ADMIN
+        // Ambil ID tim dimana user punya role 'admin'
+        $adminTeamIds = $user->teams()
+            ->wherePivot('role', 'admin')
+            ->pluck('teams.id') // Ambil ID timnya
+            ->toArray();
+
+        return parent::getTableQuery()->where(function ($query) use ($user, $adminTeamIds) {
+            // Tampilkan link jika tim_id nya ada di daftar tim yang dia kuasai
+            $query->whereIn('team_id', $adminTeamIds)
+                ->orWhere('is_bps_pusat', true);
         });
     }
 }

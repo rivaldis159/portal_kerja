@@ -16,4 +16,10 @@ class EditUser extends EditRecord
             Actions\DeleteAction::make(),
         ];
     }
+
+    // Tambahkan ini: Redirect ke halaman List setelah simpan
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }
