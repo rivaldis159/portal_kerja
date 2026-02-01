@@ -14,37 +14,37 @@ class PortalController extends Controller
     public function index()
     {
         $user = auth()->user();
-        
+
         // Ambil ID & Nama Tim untuk filter dropdown (jika perlu)
         $teams = Team::select('id', 'name')->get();
 
         $categories = Category::where('is_active', true)
-            ->with(['links' => function($query) use ($user) {
+            ->with(['links' => function ($query) use ($user) {
                 $query->where('is_active', true)
-                      ->where(function($q) use ($user) {
-                          // 1. Link Pusat (Semua bisa lihat)
-                          $q->where('is_bps_pusat', true);
-                          
-                          if ($user) {
-                              // 2. Link Tim Sendiri (MULTIPLE TEAMS)
-                              // Ambil semua ID tim yang diikuti user
-                              $myTeamIds = $user->teams->pluck('id')->toArray();
-                              
-                              if (!empty($myTeamIds)) {
-                                  $q->orWhereIn('team_id', $myTeamIds);
-                              }
+                    ->where(function ($q) use ($user) {
+                        // 1. Link Pusat (Semua bisa lihat)
+                        $q->where('is_bps_pusat', true);
 
-                              // 3. Link Publik dari tim lain
-                              $q->orWhere('is_public', true);
-                          } else {
-                              // Jika tamu, hanya lihat publik
-                              $q->orWhere('is_public', true);
-                          }
-                      });
+                        if ($user) {
+                            // 2. Link Tim Sendiri (MULTIPLE TEAMS)
+                            // Ambil semua ID tim yang diikuti user
+                            $myTeamIds = $user->teams->pluck('id')->toArray();
+
+                            if (!empty($myTeamIds)) {
+                                $q->orWhereIn('team_id', $myTeamIds);
+                            }
+
+                            // 3. Link Publik dari tim lain
+                            $q->orWhere('is_public', true);
+                        } else {
+                            // Jika tamu, hanya lihat publik
+                            $q->orWhere('is_public', true);
+                        }
+                    });
             }])
             ->get();
 
-        $announcements = collect(); 
+        $announcements = collect();
         if ($user) {
             $myTeamIds = $user->teams->pluck('id')->toArray();
             $announcements = Announcement::where('is_active', true)
@@ -95,7 +95,7 @@ class PortalController extends Controller
     public function updateProfile(Request $request)
     {
         $user = Auth::user();
-        
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
@@ -146,10 +146,60 @@ class PortalController extends Controller
                 'nama_pasangan' => $request->nama_pasangan,
                 'bank_name' => $request->bank_name,
                 'nomor_rekening' => $request->nomor_rekening,
-                'email_kantor' => $validated['email'], 
+                'email_kantor' => $validated['email'],
             ]
         );
 
         return back()->with('success', 'Profil berhasil diperbarui.');
+    }
+
+    public function stats(Request $request)
+    {
+        // 1. Data Tabel Pegawai (dengan Pencarian)
+        $query = \App\Models\User::query()
+            ->with(['employeeDetail', 'teams'])
+            ->where('role', '!=', 'super_admin'); // Sembunyikan akun super admin
+
+        if ($request->has('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('employeeDetail', function ($sub) use ($search) {
+                        $sub->where('nip', 'like', "%{$search}%")
+                            ->orWhere('jabatan', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $employees = $query->paginate(10);
+
+        // 2. Data Statistik untuk Grafik
+
+        // A. Grafik Jabatan (Pie Chart)
+        $jabatanStats = \App\Models\EmployeeDetail::select('jabatan', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
+            ->whereNotNull('jabatan')
+            ->groupBy('jabatan')
+            ->pluck('total', 'jabatan')
+            ->toArray();
+
+        // B. Grafik Pangkat/Golongan (Bar Chart)
+        $golonganStats = \App\Models\EmployeeDetail::select('pangkat_golongan', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
+            ->whereNotNull('pangkat_golongan')
+            ->orderBy('pangkat_golongan')
+            ->groupBy('pangkat_golongan')
+            ->pluck('total', 'pangkat_golongan')
+            ->toArray();
+
+        // C. Total Data Ringkas
+        $totalPegawai = \App\Models\User::where('role', '!=', 'super_admin')->count();
+        $totalTim = \App\Models\Team::count();
+
+        return view('portal.stats', compact(
+            'employees',
+            'jabatanStats',
+            'golonganStats',
+            'totalPegawai',
+            'totalTim'
+        ));
     }
 }

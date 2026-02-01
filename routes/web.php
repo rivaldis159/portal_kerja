@@ -22,24 +22,27 @@ Route::post('/logout', function () {
 })->name('logout');
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/home', function() {
+    Route::get('/home', function () {
         return redirect()->route('portal.index');
     });
 
     Route::get('/portal', [PortalController::class, 'index'])->name('portal.index');
-    
+
     // Rute Profile (Tampilan & Aksi Update)
     Route::get('/portal/profile', [PortalController::class, 'profile'])->name('portal.profile');
     // Tambahkan baris ini agar form update profil berfungsi:
     Route::put('/portal/profile', [PortalController::class, 'updateProfile'])->name('portal.profile.update');
-    
+
     Route::get('/link/{link}', [PortalController::class, 'redirect'])->name('link.redirect');
+
+    // Tambahkan di dalam grup middleware 'auth'
+    Route::get('/statistik-pegawai', [PortalController::class, 'stats'])->name('portal.stats');
 });
 
 
 Route::get('/api/search-links', function (\Illuminate\Http\Request $request) {
     $query = $request->get('q');
-    
+
     if (!$query) return response()->json([]);
 
     $links = \App\Models\Link::query()
