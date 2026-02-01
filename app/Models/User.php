@@ -6,11 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-use Filament\Models\Contracts\FilamentUser;
-use Filament\Panel;
-use Illuminate\Support\Facades\Log;
 
-class User extends Authenticatable implements FilamentUser // TAMBAH implements FilamentUser
+class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
@@ -19,8 +16,7 @@ class User extends Authenticatable implements FilamentUser // TAMBAH implements 
         'email',
         'password',
         'role',
-        'is_active',
-        'last_login',
+        'team_id', // Tambahan
     ];
 
     protected $hidden = [
@@ -30,43 +26,20 @@ class User extends Authenticatable implements FilamentUser // TAMBAH implements 
 
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'last_login' => 'datetime',
-        'is_active' => 'boolean',
         'password' => 'hashed',
     ];
 
-    public function teams()
-    {
-        return $this->belongsToMany(Team::class)->withPivot('joined_at')->withTimestamps();
+    // Relasi
+    public function team() {
+        return $this->belongsTo(Team::class);
     }
 
-    public function accessLogs()
-    {
-        return $this->hasMany(AccessLog::class);
+    public function employeeDetail() {
+        return $this->hasOne(EmployeeDetail::class);
     }
 
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
-    }
-
-    public function isSuperAdmin()
-    {
-        return $this->role === 'super_admin';
-    }
-
-    public function isAdmin()
-    {
-        return $this->role === 'admin';
-    }
-
-    public function updateLastLogin()
-    {
-        $this->update(['last_login' => now()]);
-    }
-
-    public function canAccessPanel(\Filament\Panel $panel): bool
-    {
-        return in_array($this->role, ['super_admin', 'admin_tim']);
-    }
+    // Cek Role
+    public function isSuperAdmin() { return $this->role === 'super_admin'; }
+    public function isKepala() { return $this->role === 'kepala'; }
+    public function isAdminTim() { return $this->role === 'admin_tim'; }
 }

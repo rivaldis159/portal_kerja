@@ -14,7 +14,7 @@ class LinkResource extends Resource
 {
     protected static ?string $model = Link::class;
     protected static ?string $navigationIcon = 'heroicon-o-link';
-    protected static ?string $navigationGroup = 'Content Management';
+    protected static ?string $navigationGroup = 'Manajemen Portal';
 
     public static function form(Form $form): Form
     {
@@ -22,45 +22,29 @@ class LinkResource extends Resource
             ->schema([
                 Forms\Components\Select::make('team_id')
                     ->relationship('team', 'name')
-                    ->required()
-                    ->preload(),
+                    ->default(auth()->user()->team_id)
+                    ->required(),
                 Forms\Components\Select::make('category_id')
                     ->relationship('category', 'name')
-                    ->preload(),
-                Forms\Components\TextInput::make('title')
-                    ->required()
-                    ->maxLength(255),
-                Forms\Components\TextInput::make('url')
-                    ->required()
-                    ->url()
-                    ->maxLength(500)
-                    ->columnSpanFull(),
-                Forms\Components\Textarea::make('description')
-                    ->maxLength(65535)
-                    ->columnSpanFull(),
-                Forms\Components\Grid::make(2)
+                    ->required(),
+                Forms\Components\TextInput::make('title')->required(),
+                Forms\Components\TextInput::make('url')->url()->required(),
+                Forms\Components\Select::make('target')
+                    ->options([
+                        '_blank' => 'Tab Baru',
+                        '_self' => 'Tab Sama',
+                    ])->default('_blank'),
+                
+                // Fitur Baru
+                Forms\Components\Section::make('Opsi Tampilan')
                     ->schema([
-                        Forms\Components\TextInput::make('icon')
-                            ->placeholder('heroicon-o-globe-alt')
-                            ->maxLength(50),
-                        Forms\Components\ColorPicker::make('color')
-                            ->default('#6b7280'),
-                    ]),
-                Forms\Components\Grid::make(3)
-                    ->schema([
-                        Forms\Components\TextInput::make('order')
-                            ->numeric()
-                            ->default(0),
-                        Forms\Components\Toggle::make('is_active')
-                            ->default(true),
-                        Forms\Components\Toggle::make('open_new_tab')
-                            ->default(true),
-                    ]),
-                Forms\Components\Toggle::make('is_public')
-                    ->label('Link Publik?')
-                    ->helperText('Aktifkan jika link ini boleh dilihat oleh user dari tim lain.')
-                    ->default(false)
-                    ->columnSpanFull(),
+                        Forms\Components\Toggle::make('is_active')->default(true),
+                        Forms\Components\Toggle::make('is_public')->label('Publik (Tim Lain Bisa Lihat)'),
+                        Forms\Components\Toggle::make('is_vpn_required')->label('Wajib VPN')->onColor('danger'),
+                        Forms\Components\Toggle::make('is_bps_pusat')
+                            ->label('Link Pusat (Muncul di Semua User)')
+                            ->visible(fn () => auth()->user()->isSuperAdmin()),
+                    ])->columns(2),
             ]);
     }
 
@@ -68,49 +52,40 @@ class LinkResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('title')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('team.name')
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('category.name')
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('url')
-                    ->limit(30)
-                    ->url(fn (Link $record): string => $record->url)
-                    ->openUrlInNewTab(),
-                Tables\Columns\ColorColumn::make('color'),
-                Tables\Columns\IconColumn::make('is_active')
-                    ->boolean(),
-                Tables\Columns\IconColumn::make('is_public')
-                    ->label('Publik')
+                Tables\Columns\TextColumn::make('title')->searchable(),
+                Tables\Columns\TextColumn::make('team.name')->label('Tim')->sortable(),
+                Tables\Columns\IconColumn::make('is_public')->boolean()->label('Publik'),
+                
+                // Badge VPN Keren
+                Tables\Columns\IconColumn::make('is_vpn_required')
+                    ->label('VPN')
                     ->boolean()
-                    ->trueIcon('heroicon-o-globe-alt')
-                    ->falseIcon('heroicon-o-lock-closed')
-                    ->trueColor('success')
-                    ->falseColor('gray')
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('order')
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('accessLogs_count')
-                    ->counts('accessLogs')
-                    ->label('Total Clicks'),
+                    ->trueIcon('heroicon-o-lock-closed')
+                    ->trueColor('danger')
+                    ->falseIcon('heroicon-o-lock-open')
+                    ->falseColor('success'),
+
+                Tables\Columns\ToggleColumn::make('is_active'),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('team')
-                    ->relationship('team', 'name'),
-                Tables\Filters\SelectFilter::make('category')
-                    ->relationship('category', 'name'),
-                Tables\Filters\TernaryFilter::make('is_active'),
+                //
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
                 ]),
-            ])
-            ->defaultSort('order');
+            ]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            //
+        ];
     }
 
     public static function getPages(): array
