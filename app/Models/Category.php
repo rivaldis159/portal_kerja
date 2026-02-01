@@ -14,6 +14,7 @@ class Category extends Model
         'name',
         'slug',
         'order',
+        'is_active',
     ];
 
     // Relationships
