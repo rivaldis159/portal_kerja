@@ -13,8 +13,8 @@ use Filament\Tables\Table;
 class EmployeeDetailResource extends Resource
 {
     protected static ?string $model = EmployeeDetail::class;
-    protected static ?string $navigationIcon = 'heroicon-o-user-circle';
-    protected static ?string $navigationLabel = 'Data Pegawai';
+    protected static ?string $navigationIcon = 'heroicon-o-user-group';
+    protected static ?string $navigationLabel = 'Manajemen Pegawai';
     protected static ?string $pluralLabel = 'Data Pegawai';
     protected static ?string $navigationGroup = 'Kepegawaian';
 
@@ -23,23 +23,54 @@ class EmployeeDetailResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Section::make('Identitas Pegawai')
-                    ->description('Pastikan data NIP dan Nama sesuai.')
                     ->schema([
                         Forms\Components\Select::make('user_id')
                             ->relationship('user', 'name')
-                            ->label('Akun Pegawai')
-                            ->required()
-                            ->searchable(),
-                        Forms\Components\TextInput::make('nip')->label('NIP')->numeric(),
-                        Forms\Components\TextInput::make('nik')->label('NIK')->numeric(),
+                            ->label('Akun User')
+                            ->searchable()
+                            ->required(),
+                        Forms\Components\TextInput::make('nip')
+                            ->label('NIP Baru (18 Digit)')
+                            ->minLength(18)->maxLength(18),
+                        Forms\Components\TextInput::make('nip_lama')
+                            ->label('NIP Lama (9 Digit)')
+                            ->minLength(9)->maxLength(9),
                     ])->columns(3),
 
-                Forms\Components\Section::make('Jabatan & Pangkat')
+                Forms\Components\Section::make('Pangkat & Jabatan')
                     ->schema([
-                        Forms\Components\TextInput::make('pangkat_golongan')->placeholder('III/a'),
-                        Forms\Components\TextInput::make('jabatan'),
-                        Forms\Components\TextInput::make('masa_kerja'),
-                        Forms\Components\TextInput::make('pendidikan_terakhir'),
+                        Forms\Components\Select::make('pangkat_golongan')
+                            ->label('Pangkat/Golongan')
+                            ->options(EmployeeDetail::getPangkatOptions())
+                            ->searchable(),
+                        
+                        Forms\Components\DatePicker::make('tmt_pangkat')
+                            ->label('TMT Pangkat'),
+
+                        Forms\Components\Select::make('jabatan')
+                            ->label('Jabatan')
+                            ->options(EmployeeDetail::getJabatanOptions())
+                            ->searchable(),
+                        
+                        Forms\Components\Group::make([
+                            Forms\Components\TextInput::make('masa_kerja_tahun')
+                                ->label('MK Tahun')
+                                ->numeric(),
+                            Forms\Components\TextInput::make('masa_kerja_bulan')
+                                ->label('MK Bulan')
+                                ->numeric(),
+                        ])->columns(2)->label('Masa Kerja'),
+                    ])->columns(2),
+
+                Forms\Components\Section::make('Pendidikan')
+                    ->schema([
+                        Forms\Components\Select::make('pendidikan_strata')
+                            ->options([
+                                'SMA/SMK' => 'SMA/SMK', 'D-I'=>'D-I', 'D-II'=>'D-II', 'D-III'=>'D-III',
+                                'D-IV'=>'D-IV', 'S-1'=>'S-1', 'S-2'=>'S-2', 'S-3'=>'S-3'
+                            ]),
+                        Forms\Components\TextInput::make('pendidikan_jurusan')
+                            ->placeholder('Contoh: Statistika'),
                     ])->columns(2),
 
                 Forms\Components\Section::make('Data Pribadi')
@@ -47,18 +78,18 @@ class EmployeeDetailResource extends Resource
                     ->schema([
                         Forms\Components\TextInput::make('tempat_lahir'),
                         Forms\Components\DatePicker::make('tanggal_lahir'),
+                        Forms\Components\TextInput::make('nik')->label('NIK KTP'),
                         Forms\Components\Select::make('status_perkawinan')
-                            ->options(['Belum Kawin'=>'Belum Kawin', 'Kawin'=>'Kawin', 'Cerai'=>'Cerai']),
+                            ->options(['Belum Kawin'=>'Belum Kawin', 'Kawin'=>'Kawin', 'Cerai Hidup'=>'Cerai Hidup', 'Cerai Mati'=>'Cerai Mati']),
                         Forms\Components\TextInput::make('nama_pasangan'),
                         Forms\Components\Textarea::make('alamat_tinggal')->columnSpanFull(),
-                    ])->columns(2),
+                    ])->columns(3),
 
-                Forms\Components\Section::make('Data Rekening')
+                Forms\Components\Section::make('Rekening Bank')
                     ->schema([
                         Forms\Components\TextInput::make('bank_name')->default('BRI'),
                         Forms\Components\TextInput::make('nomor_rekening'),
-                        Forms\Components\TextInput::make('email_kantor')->email(),
-                    ])->columns(3),
+                    ])->columns(2),
             ]);
     }
 
@@ -66,19 +97,15 @@ class EmployeeDetailResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('user.name')->label('Nama')->searchable(),
-                Tables\Columns\TextColumn::make('nip')->label('NIP'),
-                Tables\Columns\TextColumn::make('jabatan'),
+                Tables\Columns\TextColumn::make('user.name')->label('Nama')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('nip')->label('NIP')->searchable(),
+                Tables\Columns\TextColumn::make('jabatan')->sortable()->limit(30),
                 Tables\Columns\TextColumn::make('pangkat_golongan')->label('Gol'),
+                Tables\Columns\TextColumn::make('user.email')->label('Email'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
             ]);
-    }
-
-    public static function getRelations(): array
-    {
-        return [];
     }
 
     public static function getPages(): array

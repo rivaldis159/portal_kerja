@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Link extends Model
 {
+    use HasFactory;
+
     protected $fillable = [
         'team_id',
         'category_id',
@@ -13,9 +16,10 @@ class Link extends Model
         'url',
         'target',
         'is_active',
+        // Kolom Baru Wajib Masuk Sini:
         'is_public',
-        'is_vpn_required', // Baru
-        'is_bps_pusat',    // Baru
+        'is_vpn_required',
+        'is_bps_pusat',
     ];
 
     public function team() {

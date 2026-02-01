@@ -85,64 +85,70 @@ class PortalController extends Controller
     }
 
     // 6. Simpan Profil (Update Lengkap)
-    public function updateProfile(Request $request)
+public function updateProfile(Request $request)
     {
         $user = Auth::user();
         
-        // Validasi input
         $validated = $request->validate([
-            // User Data
+            // User Login Data
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,' . $user->id,
             'password' => 'nullable|min:8|confirmed',
             
-            // Employee Detail Data (Boleh kosong / nullable)
-            'nip' => 'nullable|string|max:18',
-            'nik' => 'nullable|string|max:16',
+            // Employee Details
+            'nip' => 'nullable|numeric|digits:18',
+            'nip_lama' => 'nullable|numeric|digits:9',
             'pangkat_golongan' => 'nullable|string',
+            'tmt_pangkat' => 'nullable|date',
+            'masa_kerja_tahun' => 'nullable|integer',
+            'masa_kerja_bulan' => 'nullable|integer',
             'jabatan' => 'nullable|string',
-            'masa_kerja' => 'nullable|string',
-            'pendidikan_terakhir' => 'nullable|string',
+            'pendidikan_strata' => 'nullable|string',
+            'pendidikan_jurusan' => 'nullable|string',
             'tempat_lahir' => 'nullable|string',
             'tanggal_lahir' => 'nullable|date',
+            'nik' => 'nullable|numeric',
             'alamat_tinggal' => 'nullable|string',
             'status_perkawinan' => 'nullable|string',
             'nama_pasangan' => 'nullable|string',
-            'nomor_rekening' => 'nullable|string',
             'bank_name' => 'nullable|string',
-            'email_kantor' => 'nullable|email',
+            'nomor_rekening' => 'nullable|string',
         ]);
 
-        // 1. Simpan Data Akun Utama
+        // 1. Update User Utama
         $user->name = $validated['name'];
-        $user->email = $validated['email'];
+        $user->email = $validated['email']; // Update email login
         if (!empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
         }
         $user->save();
 
-        // 2. Simpan Data Detail Pegawai
-        // Kita gunakan updateOrCreate agar jika data belum ada, akan dibuatkan baru
+        // 2. Update Detail Pegawai
         $user->employeeDetail()->updateOrCreate(
-            ['user_id' => $user->id], // Kriteria
+            ['user_id' => $user->id],
             [
                 'nip' => $request->nip,
-                'nik' => $request->nik,
+                'nip_lama' => $request->nip_lama,
                 'pangkat_golongan' => $request->pangkat_golongan,
+                'tmt_pangkat' => $request->tmt_pangkat,
+                'masa_kerja_tahun' => $request->masa_kerja_tahun,
+                'masa_kerja_bulan' => $request->masa_kerja_bulan,
                 'jabatan' => $request->jabatan,
-                'masa_kerja' => $request->masa_kerja,
-                'pendidikan_terakhir' => $request->pendidikan_terakhir,
+                'pendidikan_strata' => $request->pendidikan_strata,
+                'pendidikan_jurusan' => $request->pendidikan_jurusan,
                 'tempat_lahir' => $request->tempat_lahir,
                 'tanggal_lahir' => $request->tanggal_lahir,
+                'nik' => $request->nik,
                 'alamat_tinggal' => $request->alamat_tinggal,
                 'status_perkawinan' => $request->status_perkawinan,
                 'nama_pasangan' => $request->nama_pasangan,
-                'nomor_rekening' => $request->nomor_rekening,
                 'bank_name' => $request->bank_name,
-                'email_kantor' => $request->email_kantor,
+                'nomor_rekening' => $request->nomor_rekening,
+                // Kita gunakan email user utama sebagai email kantor juga
+                'email_kantor' => $validated['email'], 
             ]
         );
 
-        return back()->with('success', 'Data profil lengkap berhasil diperbarui.');
+        return back()->with('success', 'Data pegawai berhasil diperbarui.');
     }
 }
