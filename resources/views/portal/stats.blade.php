@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Eksekutif SDM - BPS</title>
+    <title>Dashboard Pegawai</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
@@ -23,8 +23,8 @@
             <div class="flex items-center gap-3">
                 <img src="{{ asset('images/logo.png') }}" alt="Logo" class="h-9 w-auto">
                 <div>
-                    <h1 class="font-bold text-gray-800 leading-none text-lg">Dashboard SDM</h1>
-                    <span class="text-[10px] text-gray-500 font-medium tracking-wider uppercase">Pusat Data Kepegawaian</span>
+                    <h1 class="font-bold text-gray-800 leading-none text-lg">Dashboard Pegawai</h1>
+                    <span class="text-[10px] text-gray-500 font-medium tracking-wider uppercase">BPS KABUPATEN DAIRI</span>
                 </div>
             </div>
             <a href="{{ route('portal.index') }}" class="px-4 py-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 text-sm font-medium transition flex items-center gap-2">
@@ -36,7 +36,7 @@
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between relative overflow-hidden group">
                 <div>
                     <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Total Pegawai</p>
@@ -54,16 +54,6 @@
                 </div>
                 <div class="p-3 bg-green-50 text-green-600 rounded-lg">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                </div>
-            </div>
-
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-100 flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Ultah Bulan Ini</p>
-                    <h3 class="text-3xl font-bold text-gray-800 mt-1">{{ $birthdayUsers->count() }} <span class="text-sm font-normal text-gray-400">Orang</span></h3>
-                </div>
-                <div class="p-3 bg-pink-50 text-pink-600 rounded-lg">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 15.546c-.523 0-1.046.151-1.5.454a2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.704 2.704 0 00-3 0 2.704 2.704 0 01-3 0 2.701 2.701 0 00-1.5-.454M9 6v2m3-2v2m3-2v2M9 3h.01M12 3h.01M15 3h.01M21 21v-7a2 2 0 00-2-2H5a2 2 0 00-2 2v7h18zm-3-9v-2a2 2 0 00-2-2H8a2 2 0 00-2 2v2h12z"></path></svg>
                 </div>
             </div>
 
@@ -96,178 +86,124 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-            <div class="lg:col-span-3">
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-8" 
+             x-data="{ 
+                search: '{{ request('search') }}',
+                sort: '{{ request('sort', 'name') }}',
+                direction: '{{ request('direction', 'asc') }}',
+                perPage: '20',
+                isLoading: false,
+                htmlContent: '',
+                
+                async fetchData() {
+                    this.isLoading = true;
+                    const params = new URLSearchParams({
+                        search: this.search,
+                        sort: this.sort,
+                        direction: this.direction,
+                        per_page: this.perPage
+                    });
+
+                    try {
+                        const response = await fetch(`{{ route('portal.employees.search') }}?${params.toString()}`);
+                        this.htmlContent = await response.text();
+                        
+                        // Update Pagination render if needed (logic handled by partial returning rows + hidden pagination data if simple)
+                        // Note: For full pagination update we might need a better strategy, 
+                        // but for 'Show All' vs 'Paginate', checking the hidden row is a simple trick or just replacing the whole table body.
+                    } catch (error) {
+                        console.error('Error fetching data:', error);
+                    } finally {
+                        this.isLoading = false;
+                    }
+                },
+                init() {
+                    this.fetchData();
+                    
+                    // Watchers
+                    this.$watch('search', () => { setTimeout(() => this.fetchData(), 500) }); // Debounce 500ms manually roughly
+                    this.$watch('perPage', () => this.fetchData());
+                },
+                setSort(column) {
+                    if (this.sort === column) {
+                        this.direction = this.direction === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        this.sort = column;
+                        this.direction = 'asc';
+                    }
+                    this.fetchData();
+                }
+             }">
+             
+            <div class="lg:col-span-4">
                 <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                     <div class="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-4">
                         <h3 class="text-lg font-bold text-gray-800">Direktori Pegawai</h3>
-                        <form action="{{ route('portal.stats') }}" method="GET" class="w-full sm:w-64">
-                            <input type="text" name="search" value="{{ request('search') }}" placeholder="Cari Nama / NIP..." class="w-full pl-4 pr-10 py-2 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500 transition text-sm">
-                            @if(request('sort')) <input type="hidden" name="sort" value="{{ request('sort') }}"> @endif
-                            @if(request('direction')) <input type="hidden" name="direction" value="{{ request('direction') }}"> @endif
-                        </form>
+                        
+                        <div class="flex items-center gap-3 w-full sm:w-auto">
+                            <!-- Dropdown Rows -->
+                            <select x-model="perPage" class="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2">
+                                <option value="20">20 Baris</option>
+                                <option value="50">50 Baris</option>
+                                <option value="100">100 Baris</option>
+                                <option value="all">Tampilkan Semua</option>
+                            </select>
+
+                            <!-- Search Input -->
+                            <div class="relative w-full sm:w-64">
+                                <input type="text" x-model.debounce.500ms="search" placeholder="Cari Nama / NIP..." 
+                                    class="w-full pl-10 pr-4 py-2 rounded-lg bg-gray-50 border border-gray-200 focus:bg-white focus:ring-2 focus:ring-blue-500 transition text-sm">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                </div>
+                                <div x-show="isLoading" class="absolute inset-y-0 right-0 pr-3 flex items-center">
+                                    <svg class="animate-spin h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="overflow-x-auto">
+                    <div class="overflow-x-auto min-h-[400px]">
                         <table class="w-full text-left text-sm text-gray-600">
                             <thead class="bg-gray-50/50 text-gray-500 font-medium border-b border-gray-200 uppercase tracking-wider text-xs">
                                 <tr>
-                                    <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition group" 
-                                        onclick="window.location.href='{{ route('portal.stats', ['sort' => 'name', 'direction' => request('direction') == 'asc' ? 'desc' : 'asc', 'search' => request('search')]) }}'">
+                                    <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition group select-none" @click="setSort('name')">
                                         <div class="flex items-center gap-1">
                                             Pegawai
-                                            @if(request('sort') == 'name')
-                                                <span class="text-blue-600">{{ request('direction') == 'asc' ? '▲ (A-Z)' : '▼ (Z-A)' }}</span>
-                                            @else
-                                                <span class="text-gray-300 opacity-0 group-hover:opacity-100 transition">⇅</span>
-                                            @endif
+                                            <span x-show="sort === 'name'" :class="{'text-blue-600': true}" x-text="direction === 'asc' ? '▲' : '▼'"></span>
+                                            <span x-show="sort !== 'name'" class="text-gray-300 opacity-0 group-hover:opacity-100 transition">⇅</span>
                                         </div>
                                     </th>
                                     
-                                    <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition group"
-                                        onclick="window.location.href='{{ route('portal.stats', ['sort' => 'jabatan', 'direction' => request('direction') == 'asc' ? 'desc' : 'asc', 'search' => request('search')]) }}'">
+                                    <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition group select-none" @click="setSort('jabatan')">
                                         <div class="flex items-center gap-1">
                                             Jabatan & Pangkat
-                                            @if(request('sort') == 'jabatan')
-                                                <span class="text-blue-600">{{ request('direction') == 'asc' ? '▲ (Tinggi)' : '▼ (Rendah)' }}</span>
-                                            @else
-                                                <span class="text-gray-300 opacity-0 group-hover:opacity-100 transition">⇅</span>
-                                            @endif
+                                            <span x-show="sort === 'jabatan'" :class="{'text-blue-600': true}" x-text="direction === 'asc' ? '▲' : '▼'"></span>
+                                            <span x-show="sort !== 'jabatan'" class="text-gray-300 opacity-0 group-hover:opacity-100 transition">⇅</span>
                                         </div>
                                     </th>
 
-                                    <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition group"
-                                         onclick="window.location.href='{{ route('portal.stats', ['sort' => 'masa_kerja', 'direction' => request('direction') == 'asc' ? 'desc' : 'asc', 'search' => request('search')]) }}'">
+                                    <th class="px-6 py-4 cursor-pointer hover:bg-gray-100 transition group select-none" @click="setSort('masa_kerja')">
                                         <div class="flex items-center gap-1">
                                             Masa Kerja
-                                            @if(request('sort') == 'masa_kerja')
-                                                <span class="text-blue-600">{{ request('direction') == 'asc' ? '▲ (Lama)' : '▼ (Baru)' }}</span>
-                                            @else
-                                                <span class="text-gray-300 opacity-0 group-hover:opacity-100 transition">⇅</span>
-                                            @endif
+                                            <span x-show="sort === 'masa_kerja'" :class="{'text-blue-600': true}" x-text="direction === 'asc' ? '▲' : '▼'"></span>
+                                            <span x-show="sort !== 'masa_kerja'" class="text-gray-300 opacity-0 group-hover:opacity-100 transition">⇅</span>
                                         </div>
                                     </th>
 
                                     <th class="px-6 py-4 text-center">Aksi</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-gray-100">
-                                @forelse($employees as $emp)
-                                    @php
-                                        // HITUNG MASA KERJA
-                                        $masaKerjaText = '-';
-                                        $masaKerjaDetail = '-';
-                                        // Guna employeeDetail->nip karena controller select('users.*')
-                                        $nip = $emp->employeeDetail->nip ?? null;
-                                        
-                                        if($nip && strlen($nip) == 18) {
-                                            try {
-                                                $tmtStr = substr($nip, 8, 6);
-                                                $tmt = \Carbon\Carbon::createFromFormat('Ym', $tmtStr);
-                                                $diff = $tmt->diff(now());
-                                                $masaKerjaText = $diff->y . ' Thn ' . $diff->m . ' Bln';
-                                                $masaKerjaDetail = $tmt->isoFormat('MMMM Y');
-                                            } catch(\Exception $e) {}
-                                        }
-                                    @endphp
-                                <tr class="hover:bg-blue-50/30 transition group">
-                                    <td class="px-6 py-4 align-top">
-                                        <div class="flex items-start gap-3">
-                                            <div class="h-10 w-10 mt-1 rounded-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center text-gray-600 font-bold shadow-inner shrink-0">
-                                                {{ strtoupper(substr($emp->name, 0, 1)) }}
-                                            </div>
-                                            <div>
-                                                <p class="font-bold text-gray-900 text-sm">{{ $emp->name }}</p>
-                                                <div class="flex items-center gap-1 mt-1">
-                                                    <span class="text-[10px] uppercase font-semibold text-gray-400 w-8">NIP</span>
-                                                    <span class="font-mono text-xs text-gray-600 bg-gray-100 px-1 rounded">{{ $emp->employeeDetail->nip ?? '-' }}</span>
-                                                </div>
-                                                <div class="flex items-center gap-1 mt-0.5">
-                                                    <span class="text-[10px] uppercase font-semibold text-gray-400 w-8">BPS</span>
-                                                    <span class="font-mono text-xs text-blue-600 bg-blue-50 px-1 rounded">{{ $emp->employeeDetail->nip_lama ?? '-' }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </td>
-
-                                    <td class="px-6 py-4 align-top">
-                                        <p class="text-gray-900 font-semibold text-sm mb-1 leading-snug">{{ $emp->employeeDetail->jabatan ?? '-' }}</p>
-                                        @if($emp->employeeDetail->pangkat_golongan ?? false)
-                                            <span class="bg-purple-50 text-purple-700 border border-purple-100 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide">
-                                                {{ $emp->employeeDetail->pangkat_golongan }}
-                                            </span>
-                                        @else
-                                            <span class="text-gray-300 text-xs italic">Tanpa Pangkat</span>
-                                        @endif
-                                    </td>
-
-                                    <td class="px-6 py-4 align-top">
-                                        @if($masaKerjaText != '-')
-                                            <div class="flex flex-col">
-                                                <span class="font-bold text-gray-800 text-sm">{{ $masaKerjaText }}</span>
-                                                <span class="text-[10px] text-gray-400 mt-0.5">TMT: {{ $masaKerjaDetail }}</span>
-                                            </div>
-                                        @else
-                                            <span class="text-gray-300">-</span>
-                                        @endif
-                                    </td>
-
-                                    <td class="px-6 py-4 align-top text-center">
-                                        <button @click="userModal = {{ json_encode([
-                                            'name' => $emp->name,
-                                            'email' => $emp->email,
-                                            'nip' => $emp->employeeDetail->nip ?? '-',
-                                            'nip_lama' => $emp->employeeDetail->nip_lama ?? '-',
-                                            'nik' => $emp->employeeDetail->nik ?? '-',
-                                            'jabatan' => $emp->employeeDetail->jabatan ?? '-',
-                                            'pangkat' => $emp->employeeDetail->pangkat_golongan ?? '-',
-                                            'masa_kerja' => $masaKerjaText,
-                                            'tmt' => $masaKerjaDetail,
-                                            'pendidikan' => ($emp->employeeDetail->pendidikan_strata ?? '-') . ' ' . ($emp->employeeDetail->pendidikan_jurusan ?? ''),
-                                            'lahir' => ($emp->employeeDetail->tempat_lahir ?? '-') . ', ' . ($emp->employeeDetail->tanggal_lahir ?? '-'),
-                                            'alamat' => $emp->employeeDetail->alamat_tinggal ?? '-',
-                                            'bank_name' => $emp->employeeDetail->bank_name ?? '-',
-                                            'rekening' => $emp->employeeDetail->nomor_rekening ?? '-',
-                                            'tim' => $emp->teams->pluck('name')->join(', '),
-                                        ]) }}" 
-                                        class="text-blue-600 hover:text-blue-800 font-medium text-xs border border-blue-200 hover:bg-blue-50 px-4 py-2 rounded-lg transition shadow-sm hover:shadow-md">
-                                            Detail
-                                        </button>
-                                    </td>
-                                </tr>
-                                @empty
-                                <tr><td colspan="4" class="px-6 py-10 text-center text-gray-400 italic">Data tidak ditemukan.</td></tr>
-                                @endforelse
+                            <tbody class="divide-y divide-gray-100" x-html="htmlContent">
+                                <!-- Data Loaded via AJAX -->
+                                <tr><td colspan="4" class="text-center py-10 text-gray-400">Memuat data...</td></tr>
                             </tbody>
                         </table>
                     </div>
-                    <div class="p-4 border-t border-gray-200 bg-gray-50/50">
-                        {{ $employees->withQueryString()->links() }}
-                    </div>
-                </div>
-            </div>
-
-            <div class="lg:col-span-1 space-y-6">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-                    <h4 class="font-bold text-gray-800 mb-4 flex items-center gap-2">
-                        <span class="text-xl">🎂</span> Ultah Bulan Ini
-                    </h4>
-                    <div class="space-y-4 max-h-96 overflow-y-auto pr-2 scrollbar-hide">
-                        @forelse($birthdayUsers as $bday)
-                            <div class="flex items-center gap-3 p-3 bg-pink-50/50 rounded-lg border border-pink-100">
-                                <div class="h-8 w-8 rounded-full bg-pink-200 text-pink-600 flex items-center justify-center font-bold text-xs">
-                                    {{ substr($bday->name, 0, 1) }}
-                                </div>
-                                <div>
-                                    <p class="text-sm font-semibold text-gray-800 line-clamp-1">{{ $bday->name }}</p>
-                                    <p class="text-xs text-pink-600">
-                                        {{ \Carbon\Carbon::parse($bday->employeeDetail->tanggal_lahir)->isoFormat('D MMMM') }}
-                                    </p>
-                                </div>
-                            </div>
-                        @empty
-                            <p class="text-sm text-gray-400 text-center py-4">Tidak ada yang ulang tahun bulan ini.</p>
-                        @endforelse
+                    
+                    <div class="p-4 border-t border-gray-200 bg-gray-50/50 text-xs text-gray-500 text-center">
+                        <span x-show="perPage !== 'all'">Menampilkan maksimal <span x-text="perPage"></span> data per halaman.</span>
+                        <span x-show="perPage === 'all'">Menampilkan <strong>seluruh data</strong> pegawai.</span>
                     </div>
                 </div>
             </div>
@@ -418,39 +354,41 @@
 
         // 3. Chart Pendidikan
         new Chart(document.getElementById('chartPendidikan'), {
-            type: 'doughnut',
+            type: 'bar',
             data: {
                 labels: Object.keys(pendidikanData),
                 datasets: [{
+                    label: 'Jumlah Pegawai',
                     data: Object.values(pendidikanData),
                     backgroundColor: ['#10b981', '#f59e0b', '#6366f1', '#ec4899', '#8b5cf6'],
-                    borderWidth: 0,
-                    cutout: '60%'
+                    borderRadius: 4,
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: false } }
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
             }
         });
 
         // 4. Chart Umur
         new Chart(document.getElementById('chartUmur'), {
-            type: 'doughnut',
+            type: 'bar',
             data: {
                 labels: Object.keys(umurData),
                 datasets: [{
+                    label: 'Jumlah Pegawai',
                     data: Object.values(umurData),
                     backgroundColor: ['#3b82f6', '#8b5cf6', '#f43f5e', '#64748b'],
-                    borderWidth: 0,
-                    cutout: '60%'
+                    borderRadius: 4,
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: { legend: { display: false } }
+                plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
             }
         });
     </script>

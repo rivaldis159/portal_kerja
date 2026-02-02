@@ -12,6 +12,9 @@ Route::get('/', function () {
     return view('portal.login');
 })->name('login');
 
+Route::get('/login', function () {
+    return redirect()->route('login');
+});
 Route::post('/login', [PortalController::class, 'loginAction'])->name('login.action');
 
 Route::post('/logout', function () {
@@ -37,6 +40,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Tambahkan di dalam grup middleware 'auth'
     Route::get('/statistik-pegawai', [PortalController::class, 'stats'])->name('portal.stats');
+    Route::get('/portal/employees/search', [PortalController::class, 'searchEmployees'])->name('portal.employees.search');
 });
 
 

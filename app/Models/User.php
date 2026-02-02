@@ -6,7 +6,10 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
+
+class User extends Authenticatable implements FilamentUser
 {
     use HasFactory, Notifiable;
 
@@ -15,7 +18,6 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
-        // 'team_id', // Kita hapus ini karena sudah pakai tabel pivot team_user
     ];
 
     protected $hidden = [
@@ -31,19 +33,15 @@ class User extends Authenticatable
         ];
     }
 
-    // RELASI BARU: BISA BANYAK TIM
     public function teams()
     {
-        // withPivot('role') artinya kita ikut ambil kolom role dari tabel penghubung
         return $this->belongsToMany(Team::class, 'team_user')
             ->withPivot('role')
             ->withTimestamps();
     }
 
-    // Helper untuk cek apakah dia admin di tim tertentu
     public function isTeamAdmin($teamId)
     {
-        // Cek apakah di relasi teams, ada yg ID-nya sekian DAN role-nya 'admin'
         return $this->teams()
             ->where('team_id', $teamId)
             ->wherePivot('role', 'admin')
@@ -55,17 +53,31 @@ class User extends Authenticatable
         return $this->hasOne(EmployeeDetail::class);
     }
 
-    // Helper Role
     public function isSuperAdmin()
     {
-        return $this->role === 'super_admin';
+        return in_array($this->role, ['super_admin', 'admin']);
     }
+
     public function isKepala()
     {
         return $this->role === 'kepala';
     }
+
     public function isAdminTim()
     {
-        return $this->role === 'admin_tim';
+        return $this->teams()->wherePivot('role', 'admin')->exists();
+    }
+
+    public function getManagedTeamIds()
+    {
+        if ($this->isSuperAdmin() || $this->isKepala()) {
+            return \App\Models\Team::pluck('id')->toArray();
+        }
+        return $this->teams()->wherePivot('role', 'admin')->pluck('teams.id')->toArray();
+    }
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->isSuperAdmin() || $this->isKepala() || $this->isAdminTim();
     }
 }

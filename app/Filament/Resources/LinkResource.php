@@ -26,9 +26,13 @@ class LinkResource extends Resource
                         Forms\Components\Section::make('Info Link')
                             ->schema([
                                 Forms\Components\Select::make('team_id')
-                                    ->relationship('team', 'name')
-                                    ->default(fn() => auth()->user()->team_id)
+                                    ->relationship('team', 'name', fn(\Illuminate\Database\Eloquent\Builder $query) => 
+                                        auth()->user()->isSuperAdmin() || auth()->user()->isKepala() 
+                                            ? $query 
+                                            : $query->whereIn('id', auth()->user()->getManagedTeamIds())
+                                    )
                                     ->label('Tim Pemilik')
+                                    ->default(fn() => auth()->user()->teams()->wherePivot('role', 'admin')->first()?->id)
                                     ->required(),
                                 Forms\Components\Select::make('category_id')
                                     ->relationship('category', 'name')
@@ -39,6 +43,11 @@ class LinkResource extends Resource
                                 Forms\Components\Select::make('target')
                                     ->options(['_blank' => 'Tab Baru', '_self' => 'Tab Sama'])
                                     ->default('_blank'),
+                                Forms\Components\Textarea::make('description')
+                                    ->label('Deskripsi Singkat')
+                                    ->rows(3)
+                                    ->placeholder('Tambahkan keterangan untuk memudahkan pencarian...')
+                                    ->columnSpanFull(),
                             ])
                     ]),
 
@@ -51,7 +60,7 @@ class LinkResource extends Resource
                                 Forms\Components\Toggle::make('is_vpn_required')->label('Wajib VPN')->onColor('danger'),
                                 Forms\Components\Toggle::make('is_bps_pusat')
                                     ->label('Link Pusat')
-                                    ->visible(fn () => auth()->user()?->isSuperAdmin() ?? false),
+                                    ->visible(fn () => auth()->user()?->isSuperAdmin() || auth()->user()?->isKepala() || auth()->user()?->isAdminTim()),
                             ])
                     ])
             ]);
@@ -66,6 +75,12 @@ class LinkResource extends Resource
                 Tables\Columns\TextColumn::make('team.name')->label('Tim'),
                 
                 // Badge Status
+                Tables\Columns\IconColumn::make('is_bps_pusat')
+                    ->label('Pusat')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-building-library')
+                    ->trueColor('info'),
+
                 Tables\Columns\IconColumn::make('is_vpn_required')
                     ->label('VPN')
                     ->boolean()
@@ -87,5 +102,15 @@ class LinkResource extends Resource
             'create' => Pages\CreateLink::route('/create'),
             'edit' => Pages\EditLink::route('/{record}/edit'),
         ];
+    }
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        if (auth()->user()->isSuperAdmin() || auth()->user()->isKepala()) {
+            return $query;
+        }
+
+        return $query->whereIn('team_id', auth()->user()->getManagedTeamIds());
     }
 }

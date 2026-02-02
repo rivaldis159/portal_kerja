@@ -20,6 +20,7 @@ class Link extends Model
         'is_public',
         'is_vpn_required',
         'is_bps_pusat',
+        'description',
     ];
 
     public function team() {

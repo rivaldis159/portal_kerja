@@ -77,4 +77,14 @@ class TeamResource extends Resource
             'edit' => Pages\EditTeam::route('/{record}/edit'),
         ];
     }
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        if (auth()->user()->isSuperAdmin() || auth()->user()->isKepala()) {
+            return $query;
+        }
+
+        return $query->whereIn('id', auth()->user()->getManagedTeamIds());
+    }
 }

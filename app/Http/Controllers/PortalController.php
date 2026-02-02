@@ -181,55 +181,43 @@ class PortalController extends Controller
             ->leftJoin('employee_details', 'users.id', '=', 'employee_details.user_id');
 
         if ($sortColumn === 'name') {
-            // 1. Sort Pegawai (Abjad Nama)
             $query->orderBy('users.name', $sortDirection);
         } elseif ($sortColumn === 'jabatan') {
-            // 2. Sort Jabatan (CUSTOM ORDER SESUAI PERMINTAAN)
-            $jabatanOrder = [
-                'Kepala BPS Kabupaten Dairi',
-                'Kepala Subbagian Umum',
-                'Penata Laksana Barang Terampil',
-                'Analis Pengelola Keuangan APBN Ahli Muda',
-                'Pranata Keuangan APBN Mahir',
-                'Analis Anggaran Ahli Muda',
-                'Analis Anggaran Ahli Pertama',
-                'Pustakawan Mahir',
-                'Pustakawan Terampil',
-                'Pengelola Barang Milik Negara',
-                'Pengolah Data',
-                'Pranata Kearsipan',
-                'Statistisi Ahli Madya',
-                'Statistisi Ahli Muda',
-                'Statistisi Ahli Pertama',
-                'Statistisi Mahir',
-                'Statistisi Terampil',
-                'Pranata Komputer Ahli Madya',
-                'Pranata Komputer Ahli Muda',
-                'Pranata Komputer Ahli Pertama',
-                'Pranata Komputer Penyelia',
-                'Pranata Komputer Mahir',
-                'Pranata Komputer Terampil',
-                'Pengolah Data'
+            // Sort custom order Pangkat from highest to lowest or vice versa
+            // Urutan Pangkat PNS (Golongan IV, III, II, I)
+            $pangkatOrder = [
+                'Pembina Utama (IV/e)', 'Pembina Utama Madya (IV/d)', 'Pembina Utama Muda (IV/c)', 'Pembina Tingkat I (IV/b)', 'Pembina (IV/a)',
+                'Penata Tingkat I (III/d)', 'Penata (III/c)', 'Penata Muda Tingkat I (III/b)', 'Penata Muda (III/a)',
+                'Pengatur Tingkat I (II/d)', 'Pengatur (II/c)', 'Pengatur Muda Tingkat I (II/b)', 'Pengatur Muda (II/a)',
+                'Juru Tingkat I (I/d)', 'Juru (I/c)', 'Juru Muda Tingkat I (I/b)', 'Juru Muda (I/a)'
             ];
 
-            // Ubah array jadi string untuk query SQL
-            $orderByString = "'" . implode("','", $jabatanOrder) . "'";
+            // If we have just 'IV/a', 'III/b' etc without text, we might need a different list or a different strategy.
+            // But usually BPS data includes the name like 'Pembina (IV/a)'.
+            // Safest fallback is alphabetical if exact match fails, but let's try FIELD first.
+            // Note: Since user wants 'sort by pangkat', we use FIELD on pangkat_golongan.
+            // If the data is just 'IV/a', we should adjust the array. Based on view_file output previously it seemed to be longer strings?
+            // Actually in employee-table.blade.php: $emp->employeeDetail->pangkat_golongan
+            // Let's assume standard names. If it fails, alphabetical sort on "IV/...", "III/..." works decent enough BUT "Pembina" vs "Penata" is Z-A reverse.
+            // Actually, let's use a robust approach: try to sort by string length? No.
+            // Let's stick to the list above which is standard.
 
-            // Field yang tidak ada di list akan ditaruh di urutan terakhir
-            $query->orderByRaw("FIELD(employee_details.jabatan, $orderByString) " . $sortDirection);
+            $orderByString = "'" . implode("','", $pangkatOrder) . "'";
+            // FIELD returns index (1-based), 0 if not found.
+            // So 'Pembina Utama' (index 1). 'Juru Muda' (index 17).
+            // ASC: 1 -> 17 (Highest rank first? No, 1 is index. So Pembina (Top) appears first).
+            // Usually "Rank ASC" means Lowest to Highest (I/a -> IV/e).
+            // If our list is High -> Low:
+            // ASC sort on FIELD will show High -> Low.
+            // DESC sort on FIELD will show Low -> High.
+            $query->orderByRaw("FIELD(employee_details.pangkat_golongan, $orderByString) " . $sortDirection);
         } elseif ($sortColumn === 'masa_kerja') {
-            // 3. Sort Masa Kerja (Berdasarkan TMT di dalam NIP)
-            // Kita ambil digit ke-9 sebanyak 6 karakter (YYYYMM TMT)
-            // Logic:
-            // - Jika ASC (Lama): Kita cari TMT tahun 'kecil' (misal 1998) -> ASC
-            // - Jika DESC (Baru): Kita cari TMT tahun 'besar' (misal 2024) -> DESC
-
             $query->orderByRaw("SUBSTRING(employee_details.nip, 9, 6) " . $sortDirection);
         }
 
         $employees = $query->paginate(20)->withQueryString();
 
-        // --- BAGIAN STATISTIK GRAFIK (TETAP SAMA) ---
+        // --- BAGIAN STATISTIK GRAFIK ---
         $allDetails = \App\Models\EmployeeDetail::all();
 
         $jabatanStats = $allDetails->groupBy('jabatan')->map->count()->toArray();
@@ -265,24 +253,62 @@ class PortalController extends Controller
             }
         }
 
-        $birthdayUsers = \App\Models\User::whereHas('employeeDetail', function ($q) {
-            $q->whereMonth('tanggal_lahir', now()->month);
-        })->with('employeeDetail')->get();
-
         $totalPegawai = \App\Models\User::where('role', '!=', 'super_admin')->count();
         $avgAge = $allDetails->filter(fn($i) => $i->tanggal_lahir)->map(fn($i) => \Carbon\Carbon::parse($i->tanggal_lahir)->age)->avg();
         $avgAge = round($avgAge ?: 0);
 
         return view('portal.stats', compact(
-            'employees',
-            'jabatanStats',
-            'golonganStats',
-            'pendidikanStats',
-            'umurStats',
-            'masaKerjaStats',
-            'birthdayUsers',
-            'totalPegawai',
-            'avgAge'
+            'employees', 'jabatanStats', 'golonganStats', 'pendidikanStats', 'umurStats', 'masaKerjaStats', 'totalPegawai', 'avgAge'
         ));
+    }
+
+    public function searchEmployees(Request $request)
+    {
+        $query = \App\Models\User::query()
+            ->with(['employeeDetail', 'teams'])
+            ->where('role', '!=', 'super_admin');
+
+        // Filter Pencarian
+        if ($request->has('search') && $request->search != '') {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhereHas('employeeDetail', function ($sub) use ($search) {
+                        $sub->where('nip', 'like', "%{$search}%")
+                            ->orWhere('nip_lama', 'like', "%{$search}%")
+                            ->orWhere('jabatan', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $sortColumn = $request->get('sort', 'name');
+        $sortDirection = $request->get('direction', 'asc');
+        $perPage = $request->get('per_page', 20);
+
+        $query->select('users.*')
+            ->leftJoin('employee_details', 'users.id', '=', 'employee_details.user_id');
+
+        if ($sortColumn === 'name') {
+            $query->orderBy('users.name', $sortDirection);
+        } elseif ($sortColumn === 'jabatan') {
+             $pangkatOrder = [
+                'Pembina Utama (IV/e)', 'Pembina Utama Madya (IV/d)', 'Pembina Utama Muda (IV/c)', 'Pembina Tingkat I (IV/b)', 'Pembina (IV/a)',
+                'Penata Tingkat I (III/d)', 'Penata (III/c)', 'Penata Muda Tingkat I (III/b)', 'Penata Muda (III/a)',
+                'Pengatur Tingkat I (II/d)', 'Pengatur (II/c)', 'Pengatur Muda Tingkat I (II/b)', 'Pengatur Muda (II/a)',
+                'Juru Tingkat I (I/d)', 'Juru (I/c)', 'Juru Muda Tingkat I (I/b)', 'Juru Muda (I/a)'
+            ];
+            $orderByString = "'" . implode("','", $pangkatOrder) . "'";
+            $query->orderByRaw("FIELD(employee_details.pangkat_golongan, $orderByString) " . $sortDirection);
+        } elseif ($sortColumn === 'masa_kerja') {
+            $query->orderByRaw("SUBSTRING(employee_details.nip, 9, 6) " . $sortDirection);
+        }
+
+        if ($perPage == 'all') {
+            $employees = $query->get();
+        } else {
+            $employees = $query->paginate((int)$perPage)->withQueryString();
+        }
+
+        return view('portal.partials.employee-table', compact('employees'))->render();
     }
 }

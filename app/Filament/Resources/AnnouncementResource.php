@@ -25,9 +25,15 @@ class AnnouncementResource extends Resource
                 Forms\Components\TextInput::make('title')->required(),
                 Forms\Components\Textarea::make('content')->required(),
                 Forms\Components\Select::make('team_id')
-                    ->relationship('team', 'name')
+                    ->relationship('team', 'name', fn(\Illuminate\Database\Eloquent\Builder $query) => 
+                        auth()->user()->isSuperAdmin() || auth()->user()->isKepala() 
+                            ? $query 
+                            : $query->whereIn('id', auth()->user()->getManagedTeamIds())
+                    )
                     ->label('Tim (Opsional)')
-                    ->helperText('Kosongkan jika untuk semua tim'),
+                    ->helperText('Kosongkan jika untuk semua tim (Hanya Super Admin)')
+                    ->disabled(fn() => !auth()->user()->isSuperAdmin() && !auth()->user()->isKepala())
+                    ->default(fn() => auth()->user()->teams()->wherePivot('role', 'admin')->first()?->id),
                 Forms\Components\Toggle::make('is_active')->default(true),
             ]);
     }
@@ -53,5 +59,15 @@ class AnnouncementResource extends Resource
             'create' => Pages\CreateAnnouncement::route('/create'),
             'edit' => Pages\EditAnnouncement::route('/{record}/edit'),
         ];
+    }
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        if (auth()->user()->isSuperAdmin() || auth()->user()->isKepala()) {
+            return $query;
+        }
+
+        return $query->whereIn('team_id', auth()->user()->getManagedTeamIds());
     }
 }
