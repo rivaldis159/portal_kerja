@@ -228,17 +228,18 @@ class PortalController extends Controller
             // Actually, let's use a robust approach: try to sort by string length? No.
             // Let's stick to the list above which is standard.
 
-            $orderByString = "'" . implode("','", $pangkatOrder) . "'";
-            // FIELD returns index (1-based), 0 if not found.
-            // So 'Pembina Utama' (index 1). 'Juru Muda' (index 17).
-            // ASC: 1 -> 17 (Highest rank first? No, 1 is index. So Pembina (Top) appears first).
-            // Usually "Rank ASC" means Lowest to Highest (I/a -> IV/e).
-            // If our list is High -> Low:
-            // ASC sort on FIELD will show High -> Low.
-            // DESC sort on FIELD will show Low -> High.
-            $query->orderByRaw("FIELD(employee_details.pangkat_golongan, $orderByString) " . $sortDirection);
+            $sqlCase = "CASE employee_details.pangkat_golongan ";
+            foreach ($pangkatOrder as $index => $pangkat) {
+                // Binding manually or just inserting strings safely since these are hardcoded values
+                $sqlCase .= "WHEN '$pangkat' THEN ".($index + 1)." ";
+            }
+            $sqlCase .= "ELSE 999 END"; // 999 for unknown ranks (put at bottom)
+
+            $query->orderByRaw("$sqlCase $sortDirection");
         } elseif ($sortColumn === 'masa_kerja') {
-            $query->orderByRaw("SUBSTRING(employee_details.nip, 9, 6) " . $sortDirection);
+            // Sort by Date extracted from NIP (YYYYMM) - characters 9 to 14
+            // Postgres & MySQL support SUBSTR or SUBSTRING properly
+            $query->orderByRaw("SUBSTR(employee_details.nip, 9, 6) " . $sortDirection);
         }
 
         $employees = $query->paginate(20)->withQueryString();
