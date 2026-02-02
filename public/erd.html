@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERD - Portal Kerja BPS Dairi</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; background: #f8fafc; }
+        h1 { color: #334155; margin-bottom: 10px; }
+        .container { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); width: 100%; max-width: 1200px; overflow: auto; }
+        .instructions { margin-bottom: 20px; color: #64748b; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <h1>Entity Relationship Diagram (ERD)</h1>
+    <p class="instructions">Silakan screenshot halaman ini atau gunakan fitur "Save as Image" jika tersedia di browser Anda.</p>
+    
+    <div class="container">
+        <pre class="mermaid">
+erDiagram
+    USERS ||--|| EMPLOYEE_DETAILS : has_profile
+    USERS }|--|{ TEAMS : joins
+    TEAMS ||--|{ LINKS : owns
+    TEAMS ||--|{ ANNOUNCEMENTS : publishes
+    CATEGORIES ||--|{ LINKS : classifies
+
+    USERS {
+        bigint id PK
+        string name
+        string email
+        string password
+        enum role "super_admin, admin, kepala, pegawai"
+        boolean is_active
+        timestamp last_login
+    }
+
+    EMPLOYEE_DETAILS {
+        bigint id PK
+        bigint user_id FK
+        string nip
+        string nik
+        string pangkat_golongan
+        string jabatan
+        string masa_kerja
+        string pendidikan_terakhir
+        string tempat_lahir
+        date tanggal_lahir
+        text alamat_tinggal
+        string status_perkawinan
+        string nama_pasangan
+        string nomor_rekening
+        string bank_name
+    }
+
+    TEAMS {
+        bigint id PK
+        string name
+        text description
+        string color
+        string icon
+    }
+
+    TEAM_USER {
+        bigint id PK
+        bigint team_id FK
+        bigint user_id FK
+        string role "admin, member"
+        timestamp joined_at
+    }
+
+    LINKS {
+        bigint id PK
+        bigint team_id FK
+        bigint category_id FK
+        string title
+        string url
+        text description
+        string target
+        boolean is_active
+        boolean is_public
+        boolean is_vpn_required
+        boolean is_bps_pusat
+        integer order
+    }
+
+    CATEGORIES {
+        bigint id PK
+        string name
+        string slug
+        integer order
+        boolean is_active
+    }
+
+    ANNOUNCEMENTS {
+        bigint id PK
+        bigint team_id FK "Nullable (Global)"
+        string title
+        text content
+        boolean is_active
+        enum priority
+    }
+        </pre>
+    </div>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</body>
+</html>

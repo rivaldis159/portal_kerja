@@ -44,6 +44,32 @@ class PortalController extends Controller
             }])
             ->get();
 
+        // Filter duplikasi URL di level Collection (PHP) dengan Prioritas
+        $categories->each(function ($category) use ($user) {
+            $myTeamIds = $user ? $user->teams->pluck('id')->toArray() : [];
+
+            $uniqueLinks = $category->links
+                ->sortByDesc(function ($link) use ($myTeamIds) {
+                    // SKOR PRIORITAS (Makin tinggi makin "menang")
+                    $score = 0;
+                    
+                    // 1. Link Pusat = Prioritas Tertinggi (Score: 100)
+                    if ($link->is_bps_pusat) $score += 100;
+                    
+                    // 2. Link dari Tim Saya Sendiri = Prioritas Kedua (Score: 50)
+                    // Agar settingan admin tim saya sendiri yang saya lihat, bukan tim orang lain
+                    if (in_array($link->team_id, $myTeamIds)) $score += 50;
+                    
+                    // 3. Link Terbaru = Prioritas Ketiga (Score: timestamp)
+                    // Jika ada konflik antar 2 tim publik asing, ambil yang paling baru diupdate
+                    return $score + $link->updated_at->timestamp;
+                })
+                ->unique('url') // Ambil satu saja berdasarkan URL (item dengan sorting teratas yang diambil)
+                ->values(); // Reset index array
+
+            $category->setRelation('links', $uniqueLinks);
+        });
+
         $announcements = collect();
         if ($user) {
             $myTeamIds = $user->teams->pluck('id')->toArray();

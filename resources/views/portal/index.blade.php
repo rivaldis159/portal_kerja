@@ -182,7 +182,13 @@
         <div class="space-y-16 min-h-[50vh]">
             @forelse($categories as $category)
             @if($category->links->isNotEmpty())
-            <div x-data="{ hasVisibleLinks: true }" x-show="hasVisibleLinks" class="category-section" x-transition>
+            <div 
+                x-data="{ hasVisibleLinks: true }" 
+                x-show="hasVisibleLinks" 
+                x-effect="hasVisibleLinks = search === '' || [...$el.querySelectorAll('a[data-title]')].some(el => el.dataset.title.includes(search.toLowerCase()) || el.dataset.description.includes(search.toLowerCase()))"
+                class="category-section" 
+                x-transition
+            >
                 <div class="flex items-center gap-4 mb-6">
                     <div class="bg-white p-2 rounded-xl shadow-sm border border-slate-100 text-blue-600">
                          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>

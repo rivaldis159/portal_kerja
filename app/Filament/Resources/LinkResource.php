@@ -39,7 +39,16 @@ class LinkResource extends Resource
                                     ->label('Kategori')
                                     ->required(),
                                 Forms\Components\TextInput::make('title')->required(),
-                                Forms\Components\TextInput::make('url')->url()->required(),
+                                Forms\Components\TextInput::make('url')
+                                    ->url()
+                                    ->required()
+                                    // Validasi: URL harus unik DALAM SATU TIM. Tim lain boleh punya URL sama.
+                                    ->unique(modifyRuleUsing: function ($rule, $get) {
+                                        return $rule->where('team_id', $get('team_id'));
+                                    }, ignoreRecord: true)
+                                    ->validationMessages([
+                                        'unique' => 'Link dengan URL ini sudah ada di Tim yang dipilih.',
+                                    ]),
                                 Forms\Components\Select::make('target')
                                     ->options(['_blank' => 'Tab Baru', '_self' => 'Tab Sama'])
                                     ->default('_blank'),
