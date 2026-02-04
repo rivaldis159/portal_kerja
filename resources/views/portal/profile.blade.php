@@ -154,7 +154,7 @@
                                 <input type="date" name="tmt_pangkat" value="{{ old('tmt_pangkat', $user->employeeDetail->tmt_pangkat ?? '') }}" class="input-field">
                             </div>
                             <div>
-                                <label class="label">Masa Kerja (MKG)</label>
+                                <label class="label">Masa Kerja</label>
                                 <div class="flex gap-3">
                                     <div class="flex-1 relative">
                                         <input type="number" name="masa_kerja_tahun" value="{{ $user->employeeDetail->masa_kerja_tahun ?? 0 }}" class="input-field pr-10 bg-slate-100 text-slate-500 cursor-not-allowed" readonly title="Dihitung otomatis dari NIP">

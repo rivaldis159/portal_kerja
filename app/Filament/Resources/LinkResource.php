@@ -90,7 +90,7 @@ class LinkResource extends Resource
                 
                 // Badge Status
                 Tables\Columns\IconColumn::make('is_bps_pusat')
-                    ->label('Pusat')
+                    ->label('Link Pusat')
                     ->boolean()
                     ->trueIcon('heroicon-o-building-library')
                     ->trueColor('info'),
@@ -99,9 +99,10 @@ class LinkResource extends Resource
                     ->label('VPN')
                     ->boolean()
                     ->trueIcon('heroicon-o-lock-closed')
-                    ->trueColor('danger'),
+                    ->trueColor('info'),
                     
-                Tables\Columns\ToggleColumn::make('is_active'),
+                Tables\Columns\ToggleColumn::make('is_active')
+                    ->label('Status Aktif'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

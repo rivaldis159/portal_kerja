@@ -190,7 +190,7 @@
                     <div class="relative z-10 max-w-2xl">
                         @auth
                         <h2 class="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">
-                            Halo, <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-orange-600">{{ Auth::user()->name }}</span> 👋
+                            Halo, <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-orange-600">{{ Auth::user()->name }}</span>
                         </h2>
                         <p class="text-slate-500">Selamat datang! Akses semua aplikasi dan link kerja BPS Kabupaten Dairi di sini</p>
                         @else
@@ -278,7 +278,6 @@
                     <!-- Empty State for Search -->
                     <div x-show="search.length > 0 && document.querySelectorAll('.category-section a[x-show]:not([style*=\'display: none\'])').length === 0"
                         class="flex flex-col items-center justify-center py-20 text-center" style="display: none;">
-                        <p class="text-slate-400 mb-2 text-4xl">🤔</p>
                         <h4 class="text-lg font-bold text-slate-900 mb-1">Tidak ditemukan</h4>
                         <p class="text-slate-500 mb-4">Tidak ada hasil untuk "<span x-text="search" class="font-semibold text-slate-800"></span>"</p>
                         <button @click="search = ''" class="text-primary-600 hover:text-primary-800 text-sm font-semibold hover:underline">Reset Pencarian</button>
