@@ -16,9 +16,7 @@ return new class extends Migration
             $table->index('title');
         });
 
-        Schema::table('announcements', function (Blueprint $table) {
-            $table->index('title');
-        });
+
     }
 
     public function down(): void
@@ -27,8 +25,6 @@ return new class extends Migration
             $table->dropIndex(['title']);
         });
 
-        Schema::table('announcements', function (Blueprint $table) {
-            $table->dropIndex(['title']);
-        });
+
     }
 };

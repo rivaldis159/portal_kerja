@@ -21,8 +21,5 @@ class Team extends Model
         return $this->hasMany(Link::class);
     }
 
-    public function announcements()
-    {
-        return $this->hasMany(Announcement::class);
-    }
+
 }

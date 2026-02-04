@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use App\Models\Category;
-use App\Models\Announcement;
 use App\Models\Team;
 
 class PortalController extends Controller
@@ -20,28 +19,26 @@ class PortalController extends Controller
 
         $categories = Category::where('is_active', true)
             ->with(['links' => function ($query) use ($user) {
-                $query->where('is_active', true)
-                    ->where(function ($q) use ($user) {
-                        // 1. Link Pusat (Semua bisa lihat)
-                        $q->where('is_bps_pusat', true);
+                $query->where('is_active', true);
 
+                // Super Admin & Kepala bisa melihat semua link aktif
+                if ($user && ($user->isSuperAdmin() || $user->isKepala())) {
+                    return;
+                }
+
+                $query->where(function ($q) use ($user) {
+                        $q->where('is_public', true)
+                          ->orWhere('is_bps_pusat', true);
+                        
                         if ($user) {
-                            // 2. Link Tim Sendiri (MULTIPLE TEAMS)
-                            // Ambil semua ID tim yang diikuti user
                             $myTeamIds = $user->teams->pluck('id')->toArray();
-
                             if (!empty($myTeamIds)) {
                                 $q->orWhereIn('team_id', $myTeamIds);
                             }
-
-                            // 3. Link Publik dari tim lain
-                            $q->orWhere('is_public', true);
-                        } else {
-                            // Jika tamu, hanya lihat publik
-                            $q->orWhere('is_public', true);
                         }
                     });
             }])
+            ->orderBy('name', 'asc')
             ->get();
 
         // Filter duplikasi URL di level Collection (PHP) dengan Prioritas
@@ -50,18 +47,9 @@ class PortalController extends Controller
 
             $uniqueLinks = $category->links
                 ->sortByDesc(function ($link) use ($myTeamIds) {
-                    // SKOR PRIORITAS (Makin tinggi makin "menang")
                     $score = 0;
-                    
-                    // 1. Link Pusat = Prioritas Tertinggi (Score: 100)
                     if ($link->is_bps_pusat) $score += 100;
-                    
-                    // 2. Link dari Tim Saya Sendiri = Prioritas Kedua (Score: 50)
-                    // Agar settingan admin tim saya sendiri yang saya lihat, bukan tim orang lain
                     if (in_array($link->team_id, $myTeamIds)) $score += 50;
-                    
-                    // 3. Link Terbaru = Prioritas Ketiga (Score: timestamp)
-                    // Jika ada konflik antar 2 tim publik asing, ambil yang paling baru diupdate
                     return $score + $link->updated_at->timestamp;
                 })
                 ->unique('url') // Ambil satu saja berdasarkan URL (item dengan sorting teratas yang diambil)
@@ -70,16 +58,7 @@ class PortalController extends Controller
             $category->setRelation('links', $uniqueLinks);
         });
 
-        $announcements = collect();
-        if ($user) {
-            $myTeamIds = $user->teams->pluck('id')->toArray();
-            $announcements = Announcement::where('is_active', true)
-                ->whereIn('team_id', $myTeamIds) // Pengumuman dari semua tim yang diikuti
-                ->latest()
-                ->get();
-        }
-
-        return view('portal.index', compact('categories', 'announcements', 'teams'));
+        return view('portal.index', compact('categories', 'teams'));
     }
 
     public function loginForm()
@@ -160,22 +139,18 @@ class PortalController extends Controller
                 'pangkat_golongan' => $request->pangkat_golongan,
                 'tmt_pangkat' => $request->tmt_pangkat,
                 
-                // HITUNG OTOMATIS MASA KERJA DARI NIP (jika ada)
                 'masa_kerja_tahun' => (function() use ($request) {
                     if ($request->nip && strlen($request->nip) == 18) {
                         try {
                             $isPPPK = str_contains($request->pangkat_golongan, 'PPPK');
                             
                             if ($isPPPK) {
-                                // Logic PPPK: Ambil 4 digit TAHUN saja (digit ke-9 s.d 12)
-                                // NIP PPPK: YYYYMMDD YYYY XX ...
-                                $yearString = substr($request->nip, 8, 4); // YYYY
+                                $yearString = substr($request->nip, 8, 4);
                                 $startYear = (int)$yearString;
                                 $currentYear = (int)date('Y');
                                 return max(0, $currentYear - $startYear);
                             } else {
-                                // Logic PNS: Ambil 6 digit YYYYMM (digit ke-9 s.d 14)
-                                $tmtString = substr($request->nip, 8, 6); // YYYYMM
+                                $tmtString = substr($request->nip, 8, 6);
                                 $tmtDate = \Carbon\Carbon::createFromFormat('Ym', $tmtString);
                                 return $tmtDate->diff(\Carbon\Carbon::now())->y;
                             }
@@ -190,10 +165,8 @@ class PortalController extends Controller
                             $isPPPK = str_contains($request->pangkat_golongan, 'PPPK');
 
                             if ($isPPPK) {
-                                // PPPK tidak hitung bulan (sesuai request)
                                 return 0;
                             } else {
-                                // PNS hitung selisih bulan
                                 $tmtString = substr($request->nip, 8, 6);
                                 $tmtDate = \Carbon\Carbon::createFromFormat('Ym', $tmtString);
                                 return $tmtDate->diff(\Carbon\Carbon::now())->m;
@@ -251,64 +224,59 @@ class PortalController extends Controller
         if ($sortColumn === 'name') {
             $query->orderBy('users.name', $sortDirection);
         } elseif ($sortColumn === 'jabatan') {
-            // Sort custom order Pangkat from highest to lowest or vice versa
-            // Urutan Pangkat PNS (Golongan IV, III, II, I)
-            $pangkatOrder = [
-                'Pembina Utama (IV/e)', 
-                'PPPK Ahli Utama (XV)',
-                'Pembina Utama Madya (IV/d)', 'Pembina Utama Muda (IV/c)', 'Pembina Tingkat I (IV/b)', 'Pembina (IV/a)',
-                'PPPK Ahli Madya (XIII)',
-                'Penata Tingkat I (III/d)', 'Penata (III/c)', 
-                'PPPK Ahli Muda (XI)',
-                'Penata Muda Tingkat I (III/b)', 'Penata Muda (III/a)',
-                'PPPK Ahli Pertama (IX)',
-                'Pengatur Tingkat I (II/d)', 'Pengatur (II/c)', 
-                'PPPK Terampil (VII)',
-                'Pengatur Muda Tingkat I (II/b)', 'Pengatur Muda (II/a)',
-                'Juru Tingkat I (I/d)', 'Juru (I/c)', 
-                'PPPK Penata Layanan Operasional (V)', 'PPPK Pengelola Umum (V)',
-                'Juru Muda Tingkat I (I/b)', 'Juru Muda (I/a)'
-            ];
-
-            // If we have just 'IV/a', 'III/b' etc without text, we might need a different list or a different strategy.
-            // But usually BPS data includes the name like 'Pembina (IV/a)'.
-            // Safest fallback is alphabetical if exact match fails, but let's try FIELD first.
-            // Note: Since user wants 'sort by pangkat', we use FIELD on pangkat_golongan.
-            // If the data is just 'IV/a', we should adjust the array. Based on view_file output previously it seemed to be longer strings?
-            // Actually in employee-table.blade.php: $emp->employeeDetail->pangkat_golongan
-            // Let's assume standard names. If it fails, alphabetical sort on "IV/...", "III/..." works decent enough BUT "Pembina" vs "Penata" is Z-A reverse.
-            // Actually, let's use a robust approach: try to sort by string length? No.
-            // Let's stick to the list above which is standard.
-
+            $pangkatOrder = $this->getPangkatOrder();
             $sqlCase = "CASE employee_details.pangkat_golongan ";
             foreach ($pangkatOrder as $index => $pangkat) {
-                // Binding manually or just inserting strings safely since these are hardcoded values
                 $sqlCase .= "WHEN '$pangkat' THEN ".($index + 1)." ";
             }
-            $sqlCase .= "ELSE 999 END"; // 999 for unknown ranks (put at bottom)
-
+            $sqlCase .= "ELSE 999 END"; 
             $query->orderByRaw("$sqlCase $sortDirection");
         } elseif ($sortColumn === 'masa_kerja') {
-            // Sort by Date extracted from NIP (YYYYMM) - characters 9 to 14
-            // Postgres & MySQL support SUBSTR or SUBSTRING properly
             $query->orderByRaw("SUBSTR(employee_details.nip, 9, 6) " . $sortDirection);
         }
 
         $employees = $query->paginate(20)->withQueryString();
 
-        // --- BAGIAN STATISTIK GRAFIK ---
-        $allDetails = \App\Models\EmployeeDetail::all();
+        // --- BAGIAN STATISTIK GRAFIK (OPTIMIZED) ---
+        // Gunakan DB::raw untuk menghitung count langsung di database, bukan di PHP
+        $jabatanStats = \App\Models\EmployeeDetail::select('jabatan', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
+            ->groupBy('jabatan')
+            ->pluck('total', 'jabatan')
+            ->toArray();
+        
+        $pangkatOrder = $this->getPangkatOrder();
+        $golonganStatsRaw = \App\Models\EmployeeDetail::select('pangkat_golongan', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
+            ->groupBy('pangkat_golongan')
+            ->pluck('total', 'pangkat_golongan')
+            ->toArray();
+            
+        // Sorting golongan tetap di PHP karena jumlahnya sedikit (hasil group by)
+        $golonganStats = collect($golonganStatsRaw)->sortBy(function ($count, $key) use ($pangkatOrder) {
+            return array_search($key, $pangkatOrder) !== false ? array_search($key, $pangkatOrder) : 999;
+        })->toArray();
 
-        $jabatanStats = $allDetails->groupBy('jabatan')->map->count()->toArray();
-        $golonganStats = $allDetails->groupBy('pangkat_golongan')->map->count()->sortKeys()->toArray();
-        $pendidikanStats = $allDetails->groupBy('pendidikan_strata')->map->count()->toArray();
+        $pendidikanStatsRaw = \App\Models\EmployeeDetail::select('pendidikan_strata', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
+            ->groupBy('pendidikan_strata')
+            ->pluck('total', 'pendidikan_strata')
+            ->toArray();
+
+        $pendidikanOrder = ['SMA/SMK', 'D-I', 'D-II', 'D-III', 'D-IV', 'S-1', 'S-2', 'S-3'];
+
+        $pendidikanStats = collect($pendidikanStatsRaw)->sortBy(function ($count, $key) use ($pendidikanOrder) {
+            return array_search($key, $pendidikanOrder) !== false ? array_search($key, $pendidikanOrder) : 999;
+        })->toArray();
+
+        // Untuk Umur & Masa Kerja, kita ambil data partial saja untuk dihitung di PHP loop
+        // Ini jauh lebih ringan daripada mengambil semua kolom (seperti foto, alamat dsb)
+        $partialDetails = \App\Models\EmployeeDetail::select('nip', 'tanggal_lahir', 'pangkat_golongan')->get();
 
         $umurStats = ['< 30 Thn' => 0, '30-40 Thn' => 0, '41-50 Thn' => 0, '> 50 Thn' => 0];
         $masaKerjaStats = ['< 5 Thn' => 0, '5-10 Thn' => 0, '10-20 Thn' => 0, '> 20 Thn' => 0];
 
-        foreach ($allDetails as $d) {
+        foreach ($partialDetails as $d) {
             // Hitung Umur
             if ($d->tanggal_lahir) {
+                // Optimasi: pake diffInYears Carbon langsung
                 $age = \Carbon\Carbon::parse($d->tanggal_lahir)->age;
                 if ($age < 30) $umurStats['< 30 Thn']++;
                 elseif ($age <= 40) $umurStats['30-40 Thn']++;
@@ -323,11 +291,9 @@ class PortalController extends Controller
                     $years = 0;
 
                     if ($isPPPK) {
-                         // PPPK: Ambil Tahun (Digit 9-12)
                          $startYear = (int)substr($d->nip, 8, 4);
                          $years = max(0, (int)date('Y') - $startYear);
                     } else {
-                        // PNS: Ambil YYYYMM (Digit 9-14)
                         $tmtString = substr($d->nip, 8, 6);
                         $tmtDate = \Carbon\Carbon::createFromFormat('Ym', $tmtString);
                         $years = $tmtDate->diffInYears(now());
@@ -337,17 +303,25 @@ class PortalController extends Controller
                     elseif ($years <= 10) $masaKerjaStats['5-10 Thn']++;
                     elseif ($years <= 20) $masaKerjaStats['10-20 Thn']++;
                     else $masaKerjaStats['> 20 Thn']++;
-                } catch (\Exception $e) {
-                }
+                } catch (\Exception $e) { }
             }
         }
 
         $totalPegawai = \App\Models\User::where('role', '!=', 'super_admin')->count();
-        $avgAge = $allDetails->filter(fn($i) => $i->tanggal_lahir)->map(fn($i) => \Carbon\Carbon::parse($i->tanggal_lahir)->age)->avg();
+        
+        $avgAge = \App\Models\EmployeeDetail::whereNotNull('tanggal_lahir')
+            ->selectRaw('AVG(DATEDIFF(NOW(), tanggal_lahir) / 365.25) as avg_age')
+            ->value('avg_age');
+            
         $avgAge = round($avgAge ?: 0);
 
+        // Options for Filters
+        $filterJabatan = \App\Models\EmployeeDetail::distinct()->whereNotNull('jabatan')->pluck('jabatan')->sort()->values();
+        $filterPangkat = \App\Models\EmployeeDetail::distinct()->whereNotNull('pangkat_golongan')->pluck('pangkat_golongan')->sort()->values();
+
         return view('portal.stats', compact(
-            'employees', 'jabatanStats', 'golonganStats', 'pendidikanStats', 'umurStats', 'masaKerjaStats', 'totalPegawai', 'avgAge'
+            'employees', 'jabatanStats', 'golonganStats', 'pendidikanStats', 'umurStats', 'masaKerjaStats', 'totalPegawai', 'avgAge',
+            'filterJabatan', 'filterPangkat'
         ));
     }
 
@@ -357,8 +331,31 @@ class PortalController extends Controller
             ->with(['employeeDetail', 'teams'])
             ->where('role', '!=', 'super_admin');
 
-        // Filter Pencarian
-        if ($request->has('search') && $request->search != '') {
+        // Apply Filters
+        if ($request->filled('jabatan')) {
+            $query->whereHas('employeeDetail', fn($q) => $q->where('jabatan', $request->jabatan));
+        }
+        if ($request->filled('pangkat')) {
+            $query->whereHas('employeeDetail', fn($q) => $q->where('pangkat_golongan', $request->pangkat));
+        }
+        if ($request->filled('pendidikan')) {
+            $query->whereHas('employeeDetail', fn($q) => $q->where('pendidikan_strata', $request->pendidikan));
+        }
+        if ($request->filled('masa_kerja')) {
+            $query->whereHas('employeeDetail', function($q) use ($request) {
+                // Assuming 'masa_kerja_tahun' is stored in DB.
+                // Filter ranges based on the char logic: <5, 5-10, 10-20, >20
+                switch ($request->masa_kerja) {
+                    case 'lt5': $q->where('masa_kerja_tahun', '<', 5); break;
+                    case '5-10': $q->whereBetween('masa_kerja_tahun', [5, 10]); break;
+                    case '10-20': $q->whereBetween('masa_kerja_tahun', [10, 20]); break;
+                    case 'gt20': $q->where('masa_kerja_tahun', '>', 20); break;
+                }
+            });
+        }
+
+        // Filter Pencarian (Keyword)
+        if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -380,42 +377,23 @@ class PortalController extends Controller
         if ($sortColumn === 'name') {
             $query->orderBy('users.name', $sortDirection);
         } elseif ($sortColumn === 'jabatan') {
-             $pangkatOrder = [
-                'Pembina Utama (IV/e)', 
-                'PPPK Ahli Utama (XV)',
-                'Pembina Utama Madya (IV/d)', 'Pembina Utama Muda (IV/c)', 'Pembina Tingkat I (IV/b)', 'Pembina (IV/a)', 'Pembina (V/a)', // Added V/a (Typo support)
-                'PPPK Ahli Madya (XIII)',
-                'Penata Tingkat I (III/d)', 'Penata (III/c)', 
-                'PPPK Ahli Muda (XI)',
-                'Penata Muda Tingkat I (III/b)', 'Penata Muda (III/a)',
-                'PPPK Ahli Pertama (IX)',
-                'Pengatur Tingkat I (II/d)', 'Pengatur (II/c)', 
-                'PPPK Terampil (VII)',
-                'Pengatur Muda Tingkat I (II/b)', 'Pengatur Muda (II/a)',
-                'Juru Tingkat I (I/d)', 'Juru (I/c)', 
-                'PPPK Penata Layanan Operasional (V)', 'PPPK Pengelola Umum (V)',
-                'Juru Muda Tingkat I (I/b)', 'Juru Muda (I/a)'
-            ];
+             $pangkatOrder = $this->getPangkatOrder();
+             
             $sqlCase = "CASE employee_details.pangkat_golongan ";
             foreach ($pangkatOrder as $index => $pangkat) {
                 $sqlCase .= "WHEN '$pangkat' THEN ".($index + 1)." ";
             }
             $sqlCase .= "ELSE 999 END";
             
-            // User Request: Segitiga Atas (ASC) = Bawah ke Atas (Low Rank to High Rank)
-            // My Array: 0 (Highest) to 25 (Lowest).
-            // So ASC Index Sort = High -> Low.
-            // To get Low -> High, we must use DESC Index Sort.
             $rankParams = $sortDirection === 'asc' ? 'desc' : 'asc';
             
             $query->orderByRaw("$sqlCase $rankParams")
                   ->orderBy('users.name', 'asc');
         } elseif ($sortColumn === 'masa_kerja') {
-            // Sort Masa Kerja:
-            // ASC (Segitiga Atas) = Bawah (0 Thn) ke Atas (30 Thn) -> Shortest Tenure First
-            // Shortest Tenure = Latest Date = DESC Date
-            $params = $sortDirection === 'asc' ? 'desc' : 'asc'; 
-            $query->orderByRaw("SUBSTR(employee_details.nip, 9, 6) " . $params);
+            // Sort using database column 'masa_kerja_tahun' is more efficient/correct if available
+            // but for consistency with 'stats' calculation we used substring before.
+            // If masa_kerja_tahun is reliably populated:
+             $query->orderBy('employee_details.masa_kerja_tahun', $sortDirection);
         }
 
         if ($perPage == 'all') {
@@ -440,5 +418,25 @@ class PortalController extends Controller
 
         // Redirect ke URL asli
         return redirect()->away($link->url);
+    }
+
+    private function getPangkatOrder()
+    {
+        return [
+            'Pembina Utama (IV/e)', 
+            'PPPK Ahli Utama (XV)',
+            'Pembina Utama Madya (IV/d)', 'Pembina Utama Muda (IV/c)', 'Pembina Tingkat I (IV/b)', 'Pembina (IV/a)', 'Pembina (V/a)',
+            'PPPK Ahli Madya (XIII)',
+            'Penata Tingkat I (III/d)', 'Penata (III/c)', 
+            'PPPK Ahli Muda (XI)',
+            'Penata Muda Tingkat I (III/b)', 'Penata Muda (III/a)',
+            'PPPK Ahli Pertama (IX)',
+            'Pengatur Tingkat I (II/d)', 'Pengatur (II/c)', 
+            'PPPK Terampil (VII)',
+            'Pengatur Muda Tingkat I (II/b)', 'Pengatur Muda (II/a)',
+            'Juru Tingkat I (I/d)', 'Juru (I/c)', 
+            'PPPK Penata Layanan Operasional (V)', 'PPPK Pengelola Umum (V)',
+            'Juru Muda Tingkat I (I/b)', 'Juru Muda (I/a)'
+        ];
     }
 }

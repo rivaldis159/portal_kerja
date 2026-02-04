@@ -7,7 +7,7 @@ use App\Models\User;
 use App\Models\Team;
 use App\Models\Category;
 use App\Models\Link;
-use App\Models\Announcement;
+
 use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
@@ -157,22 +157,7 @@ class DatabaseSeeder extends Seeder
             $hrTeam->links()->create($linkData);
         }
 
-        // Create announcements
-        Announcement::create([
-            'team_id' => null, // Global announcement
-            'title' => 'Pemeliharaan Server Scheduled',
-            'content' => 'Server maintenance akan dilakukan pada hari Sabtu, 20 Januari 2024 pukul 00:00 - 06:00 WIB.',
-            'priority' => 'high',
-            'is_active' => true,
-        ]);
 
-        Announcement::create([
-            'team_id' => $itTeam->id,
-            'title' => 'Update GitLab ke versi 16.7',
-            'content' => 'GitLab internal akan diupdate ke versi terbaru.',
-            'priority' => 'normal',
-            'is_active' => true,
-        ]);
 
         echo "Seeding completed successfully!\n";
     }

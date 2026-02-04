@@ -24,13 +24,7 @@ return new class extends Migration
             $table->string('role')->default('admin_tim')->after('email'); 
         });
 
-        // Tahap 2: Tambahkan team_id ke announcements dengan pengecekan
-        Schema::table('announcements', function (Blueprint $table) {
-            // Hanya buat jika kolom belum ada
-            if (!Schema::hasColumn('announcements', 'team_id')) {
-                $table->foreignId('team_id')->nullable()->constrained()->onDelete('cascade');
-            }
-        });
+        // Tahap 2: Tambahkan team_id ke announcements dengan pengecekan - DIHAPUS (Fitur Announcement dihapus)
     }
 
     /**
@@ -38,13 +32,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('announcements', function (Blueprint $table) {
-            if (Schema::hasColumn('announcements', 'team_id')) {
-                $table->dropForeign(['team_id']);
-                $table->dropColumn('team_id');
-            }
-        });
-
         Schema::table('users', function (Blueprint $table) {
             if (Schema::hasColumn('users', 'role')) {
                 $table->dropColumn('role');

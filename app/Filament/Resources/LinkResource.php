@@ -40,9 +40,14 @@ class LinkResource extends Resource
                                     ->required(),
                                 Forms\Components\TextInput::make('title')->required(),
                                 Forms\Components\TextInput::make('url')
-                                    ->url()
                                     ->required()
-                                    // Validasi: URL harus unik DALAM SATU TIM. Tim lain boleh punya URL sama.
+                                    ->live(onBlur: true)
+                                    ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                        if ($state && !preg_match('/^https?:\/\//', $state)) {
+                                            $set('url', 'https://' . $state);
+                                        }
+                                    })
+                                    ->url()
                                     ->unique(modifyRuleUsing: function ($rule, $get) {
                                         return $rule->where('team_id', $get('team_id'));
                                     }, ignoreRecord: true)
@@ -64,8 +69,8 @@ class LinkResource extends Resource
                     ->schema([
                         Forms\Components\Section::make('Opsi Akses')
                             ->schema([
-                                Forms\Components\Toggle::make('is_active')->default(true),
-                                Forms\Components\Toggle::make('is_public')->label('Publik (Tim Lain Bisa Lihat)'),
+                                Forms\Components\Toggle::make('is_active')->label('Aktif')->default(true),
+                                Forms\Components\Toggle::make('is_public')->label('Publik'),
                                 Forms\Components\Toggle::make('is_vpn_required')->label('Wajib VPN')->onColor('danger'),
                                 Forms\Components\Toggle::make('is_bps_pusat')
                                     ->label('Link Pusat')

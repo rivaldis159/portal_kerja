@@ -16,7 +16,6 @@ class Link extends Model
         'url',
         'target',
         'is_active',
-        // Kolom Baru Wajib Masuk Sini:
         'is_public',
         'is_vpn_required',
         'is_bps_pusat',
