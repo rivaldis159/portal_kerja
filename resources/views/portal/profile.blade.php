@@ -157,14 +157,15 @@
                                 <label class="label">Masa Kerja (MKG)</label>
                                 <div class="flex gap-3">
                                     <div class="flex-1 relative">
-                                        <input type="number" name="masa_kerja_tahun" value="{{ old('masa_kerja_tahun', $user->employeeDetail->masa_kerja_tahun ?? 0) }}" class="input-field pr-10">
+                                        <input type="number" name="masa_kerja_tahun" value="{{ $user->employeeDetail->masa_kerja_tahun ?? 0 }}" class="input-field pr-10 bg-slate-100 text-slate-500 cursor-not-allowed" readonly title="Dihitung otomatis dari NIP">
                                         <span class="absolute right-3 top-2.5 text-xs font-bold text-slate-400">THN</span>
                                     </div>
                                     <div class="flex-1 relative">
-                                        <input type="number" name="masa_kerja_bulan" value="{{ old('masa_kerja_bulan', $user->employeeDetail->masa_kerja_bulan ?? 0) }}" class="input-field pr-10">
+                                        <input type="number" name="masa_kerja_bulan" value="{{ $user->employeeDetail->masa_kerja_bulan ?? 0 }}" class="input-field pr-10 bg-slate-100 text-slate-500 cursor-not-allowed" readonly title="Dihitung otomatis dari NIP">
                                         <span class="absolute right-3 top-2.5 text-xs font-bold text-slate-400">BLN</span>
                                     </div>
                                 </div>
+                                <p class="text-[10px] text-slate-400 mt-1 italic">* Dihitung otomatis dari NIP</p>
                             </div>
 
                             <div class="md:col-span-2">

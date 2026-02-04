@@ -159,8 +159,50 @@ class PortalController extends Controller
                 'nip_lama' => $request->nip_lama,
                 'pangkat_golongan' => $request->pangkat_golongan,
                 'tmt_pangkat' => $request->tmt_pangkat,
-                'masa_kerja_tahun' => $request->masa_kerja_tahun,
-                'masa_kerja_bulan' => $request->masa_kerja_bulan,
+                
+                // HITUNG OTOMATIS MASA KERJA DARI NIP (jika ada)
+                'masa_kerja_tahun' => (function() use ($request) {
+                    if ($request->nip && strlen($request->nip) == 18) {
+                        try {
+                            $isPPPK = str_contains($request->pangkat_golongan, 'PPPK');
+                            
+                            if ($isPPPK) {
+                                // Logic PPPK: Ambil 4 digit TAHUN saja (digit ke-9 s.d 12)
+                                // NIP PPPK: YYYYMMDD YYYY XX ...
+                                $yearString = substr($request->nip, 8, 4); // YYYY
+                                $startYear = (int)$yearString;
+                                $currentYear = (int)date('Y');
+                                return max(0, $currentYear - $startYear);
+                            } else {
+                                // Logic PNS: Ambil 6 digit YYYYMM (digit ke-9 s.d 14)
+                                $tmtString = substr($request->nip, 8, 6); // YYYYMM
+                                $tmtDate = \Carbon\Carbon::createFromFormat('Ym', $tmtString);
+                                return $tmtDate->diff(\Carbon\Carbon::now())->y;
+                            }
+                        } catch (\Exception $e) { return 0; }
+                    }
+                    return 0; 
+                })(),
+                
+                'masa_kerja_bulan' => (function() use ($request) {
+                    if ($request->nip && strlen($request->nip) == 18) {
+                        try {
+                            $isPPPK = str_contains($request->pangkat_golongan, 'PPPK');
+
+                            if ($isPPPK) {
+                                // PPPK tidak hitung bulan (sesuai request)
+                                return 0;
+                            } else {
+                                // PNS hitung selisih bulan
+                                $tmtString = substr($request->nip, 8, 6);
+                                $tmtDate = \Carbon\Carbon::createFromFormat('Ym', $tmtString);
+                                return $tmtDate->diff(\Carbon\Carbon::now())->m;
+                            }
+                        } catch (\Exception $e) { return 0; }
+                    }
+                    return 0;
+                })(),
+
                 'jabatan' => $request->jabatan,
                 'pendidikan_strata' => $request->pendidikan_strata,
                 'pendidikan_jurusan' => $request->pendidikan_jurusan,
@@ -212,10 +254,20 @@ class PortalController extends Controller
             // Sort custom order Pangkat from highest to lowest or vice versa
             // Urutan Pangkat PNS (Golongan IV, III, II, I)
             $pangkatOrder = [
-                'Pembina Utama (IV/e)', 'Pembina Utama Madya (IV/d)', 'Pembina Utama Muda (IV/c)', 'Pembina Tingkat I (IV/b)', 'Pembina (IV/a)',
-                'Penata Tingkat I (III/d)', 'Penata (III/c)', 'Penata Muda Tingkat I (III/b)', 'Penata Muda (III/a)',
-                'Pengatur Tingkat I (II/d)', 'Pengatur (II/c)', 'Pengatur Muda Tingkat I (II/b)', 'Pengatur Muda (II/a)',
-                'Juru Tingkat I (I/d)', 'Juru (I/c)', 'Juru Muda Tingkat I (I/b)', 'Juru Muda (I/a)'
+                'Pembina Utama (IV/e)', 
+                'PPPK Ahli Utama (XV)',
+                'Pembina Utama Madya (IV/d)', 'Pembina Utama Muda (IV/c)', 'Pembina Tingkat I (IV/b)', 'Pembina (IV/a)',
+                'PPPK Ahli Madya (XIII)',
+                'Penata Tingkat I (III/d)', 'Penata (III/c)', 
+                'PPPK Ahli Muda (XI)',
+                'Penata Muda Tingkat I (III/b)', 'Penata Muda (III/a)',
+                'PPPK Ahli Pertama (IX)',
+                'Pengatur Tingkat I (II/d)', 'Pengatur (II/c)', 
+                'PPPK Terampil (VII)',
+                'Pengatur Muda Tingkat I (II/b)', 'Pengatur Muda (II/a)',
+                'Juru Tingkat I (I/d)', 'Juru (I/c)', 
+                'PPPK Penata Layanan Operasional (V)', 'PPPK Pengelola Umum (V)',
+                'Juru Muda Tingkat I (I/b)', 'Juru Muda (I/a)'
             ];
 
             // If we have just 'IV/a', 'III/b' etc without text, we might need a different list or a different strategy.
@@ -266,10 +318,20 @@ class PortalController extends Controller
 
             // Hitung Masa Kerja
             if ($d->nip && strlen($d->nip) == 18) {
-                $tmtString = substr($d->nip, 8, 6);
                 try {
-                    $tmtDate = \Carbon\Carbon::createFromFormat('Ym', $tmtString);
-                    $years = $tmtDate->diffInYears(now());
+                    $isPPPK = str_contains($d->pangkat_golongan, 'PPPK');
+                    $years = 0;
+
+                    if ($isPPPK) {
+                         // PPPK: Ambil Tahun (Digit 9-12)
+                         $startYear = (int)substr($d->nip, 8, 4);
+                         $years = max(0, (int)date('Y') - $startYear);
+                    } else {
+                        // PNS: Ambil YYYYMM (Digit 9-14)
+                        $tmtString = substr($d->nip, 8, 6);
+                        $tmtDate = \Carbon\Carbon::createFromFormat('Ym', $tmtString);
+                        $years = $tmtDate->diffInYears(now());
+                    }
 
                     if ($years < 5) $masaKerjaStats['< 5 Thn']++;
                     elseif ($years <= 10) $masaKerjaStats['5-10 Thn']++;
@@ -319,15 +381,41 @@ class PortalController extends Controller
             $query->orderBy('users.name', $sortDirection);
         } elseif ($sortColumn === 'jabatan') {
              $pangkatOrder = [
-                'Pembina Utama (IV/e)', 'Pembina Utama Madya (IV/d)', 'Pembina Utama Muda (IV/c)', 'Pembina Tingkat I (IV/b)', 'Pembina (IV/a)',
-                'Penata Tingkat I (III/d)', 'Penata (III/c)', 'Penata Muda Tingkat I (III/b)', 'Penata Muda (III/a)',
-                'Pengatur Tingkat I (II/d)', 'Pengatur (II/c)', 'Pengatur Muda Tingkat I (II/b)', 'Pengatur Muda (II/a)',
-                'Juru Tingkat I (I/d)', 'Juru (I/c)', 'Juru Muda Tingkat I (I/b)', 'Juru Muda (I/a)'
+                'Pembina Utama (IV/e)', 
+                'PPPK Ahli Utama (XV)',
+                'Pembina Utama Madya (IV/d)', 'Pembina Utama Muda (IV/c)', 'Pembina Tingkat I (IV/b)', 'Pembina (IV/a)', 'Pembina (V/a)', // Added V/a (Typo support)
+                'PPPK Ahli Madya (XIII)',
+                'Penata Tingkat I (III/d)', 'Penata (III/c)', 
+                'PPPK Ahli Muda (XI)',
+                'Penata Muda Tingkat I (III/b)', 'Penata Muda (III/a)',
+                'PPPK Ahli Pertama (IX)',
+                'Pengatur Tingkat I (II/d)', 'Pengatur (II/c)', 
+                'PPPK Terampil (VII)',
+                'Pengatur Muda Tingkat I (II/b)', 'Pengatur Muda (II/a)',
+                'Juru Tingkat I (I/d)', 'Juru (I/c)', 
+                'PPPK Penata Layanan Operasional (V)', 'PPPK Pengelola Umum (V)',
+                'Juru Muda Tingkat I (I/b)', 'Juru Muda (I/a)'
             ];
-            $orderByString = "'" . implode("','", $pangkatOrder) . "'";
-            $query->orderByRaw("FIELD(employee_details.pangkat_golongan, $orderByString) " . $sortDirection);
+            $sqlCase = "CASE employee_details.pangkat_golongan ";
+            foreach ($pangkatOrder as $index => $pangkat) {
+                $sqlCase .= "WHEN '$pangkat' THEN ".($index + 1)." ";
+            }
+            $sqlCase .= "ELSE 999 END";
+            
+            // User Request: Segitiga Atas (ASC) = Bawah ke Atas (Low Rank to High Rank)
+            // My Array: 0 (Highest) to 25 (Lowest).
+            // So ASC Index Sort = High -> Low.
+            // To get Low -> High, we must use DESC Index Sort.
+            $rankParams = $sortDirection === 'asc' ? 'desc' : 'asc';
+            
+            $query->orderByRaw("$sqlCase $rankParams")
+                  ->orderBy('users.name', 'asc');
         } elseif ($sortColumn === 'masa_kerja') {
-            $query->orderByRaw("SUBSTRING(employee_details.nip, 9, 6) " . $sortDirection);
+            // Sort Masa Kerja:
+            // ASC (Segitiga Atas) = Bawah (0 Thn) ke Atas (30 Thn) -> Shortest Tenure First
+            // Shortest Tenure = Latest Date = DESC Date
+            $params = $sortDirection === 'asc' ? 'desc' : 'asc'; 
+            $query->orderByRaw("SUBSTR(employee_details.nip, 9, 6) " . $params);
         }
 
         if ($perPage == 'all') {
@@ -337,5 +425,20 @@ class PortalController extends Controller
         }
 
         return view('portal.partials.employee-table', compact('employees'))->render();
+    }
+
+    public function redirect(\App\Models\Link $link)
+    {
+        // Catat Log Akses
+        \App\Models\AccessLog::create([
+            'user_id' => \Illuminate\Support\Facades\Auth::id(),
+            'link_id' => $link->id,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+            'accessed_at' => now(),
+        ]);
+
+        // Redirect ke URL asli
+        return redirect()->away($link->url);
     }
 }

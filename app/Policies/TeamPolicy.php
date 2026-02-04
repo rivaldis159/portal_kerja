@@ -12,7 +12,7 @@ class TeamPolicy
     public function create(User $user): bool { return $user->isSuperAdmin(); }
     public function update(User $user, Team $team): bool 
     { 
-        return $user->isSuperAdmin() || $team->users->contains($user->id);
+        return $user->isSuperAdmin() || $user->isTeamAdmin($team->id);
     }
     public function delete(User $user, Team $team): bool { return $user->isSuperAdmin(); }
 }

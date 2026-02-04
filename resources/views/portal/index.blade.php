@@ -200,7 +200,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     @foreach($category->links as $link)
                     <a
-                        href="{{ $link->url }}"
+                        href="{{ route('link.redirect', $link) }}"
                         target="{{ $link->target ?? '_blank' }}"
                         class="group bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm hover:shadow-xl hover:shadow-blue-500/10 border border-slate-200/60 p-5 transition-all duration-300 hover:-translate-y-1.5 flex flex-col h-full relative overflow-hidden"
                         data-title="{{ strtolower($link->title) }}"

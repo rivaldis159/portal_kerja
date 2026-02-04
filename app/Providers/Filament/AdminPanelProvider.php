@@ -30,6 +30,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login(null)
+            ->brandName('Manajemen Portal BPS Dairi') // Judul di Tab Browser
             ->colors([
                 'primary' => Color::Blue,
             ])
@@ -75,20 +76,6 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 FilamentAuthenticate::class,
             ])
-            ->authGuard('web')
-            ->middleware([
-                        EncryptCookies::class,
-                        AddQueuedCookiesToResponse::class,
-                        StartSession::class,
-                        AuthenticateSession::class,
-                        ShareErrorsFromSession::class,
-                        VerifyCsrfToken::class,
-                        SubstituteBindings::class,
-                        DisableBladeIconComponents::class,
-                        DispatchServingFilamentEvent::class,
-                    ])
-                    ->authMiddleware([
-                        Authenticate::class,
-                    ]);
+            ->authGuard('web');
     }
 }

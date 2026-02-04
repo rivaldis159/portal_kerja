@@ -4,14 +4,30 @@
         $masaKerjaText = '-';
         $masaKerjaDetail = '-';
         $nip = $emp->employeeDetail->nip ?? null;
+        $pangkat = $emp->employeeDetail->pangkat_golongan ?? '';
         
         if($nip && strlen($nip) == 18) {
             try {
-                $tmtStr = substr($nip, 8, 6);
-                $tmt = \Carbon\Carbon::createFromFormat('Ym', $tmtStr);
-                $diff = $tmt->diff(now());
-                $masaKerjaText = $diff->y . ' Thn ' . $diff->m . ' Bln';
-                $masaKerjaDetail = $tmt->isoFormat('MMMM Y');
+                $isPPPK = str_contains($pangkat, 'PPPK');
+                
+                if ($isPPPK) {
+                    // PPPK: Ambil 4 Digit Tahun (8-12)
+                    $yearStr = substr($nip, 8, 4); // YYYY
+                    $startYear = (int)$yearStr;
+                    $currYear = (int)date('Y');
+                    $diffY = max(0, $currYear - $startYear);
+                    
+                    $masaKerjaText = $diffY . ' Thn';
+                    // TMT hanya Tahun
+                    $masaKerjaDetail = 'Tahun ' . $yearStr; 
+                } else {
+                    // PNS: Ambil 6 Digit (8-14)
+                    $tmtStr = substr($nip, 8, 6);
+                    $tmt = \Carbon\Carbon::createFromFormat('Ym', $tmtStr);
+                    $diff = $tmt->diff(now());
+                    $masaKerjaText = $diff->y . ' Thn ' . $diff->m . ' Bln';
+                    $masaKerjaDetail = $tmt->isoFormat('MMMM Y');
+                }
             } catch(\Exception $e) {}
         }
     @endphp
@@ -85,5 +101,11 @@
 @endforelse
 
 @if($employees instanceof \Illuminate\Pagination\LengthAwarePaginator)
-    <tr id="pagination-data" data-links="{{ $employees->withQueryString()->links() }}"></tr>
+    <tr class="hidden">
+        <td colspan="4">
+            <div id="pagination-source">
+                {!! $employees->withQueryString()->links() !!}
+            </div>
+        </td>
+    </tr>
 @endif

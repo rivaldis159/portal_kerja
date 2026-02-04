@@ -34,6 +34,14 @@ class EmployeeDetail extends Model
             'Pembina Utama Muda (IV/c)' => 'Pembina Utama Muda (IV/c)',
             'Pembina Utama Madya (IV/d)' => 'Pembina Utama Madya (IV/d)',
             'Pembina Utama (IV/e)' => 'Pembina Utama (IV/e)',
+            // PPPK
+            'PPPK Penata Layanan Operasional (V)' => 'PPPK Penata Layanan Operasional (V)',
+            'PPPK Pengelola Umum (V)' => 'PPPK Pengelola Umum (V)',
+            'PPPK Terampil (VII)' => 'PPPK Terampil (VII)',
+            'PPPK Ahli Pertama (IX)' => 'PPPK Ahli Pertama (IX)',
+            'PPPK Ahli Muda (XI)' => 'PPPK Ahli Muda (XI)',
+            'PPPK Ahli Madya (XIII)' => 'PPPK Ahli Madya (XIII)',
+            'PPPK Ahli Utama (XV)' => 'PPPK Ahli Utama (XV)',
         ];
     }
 

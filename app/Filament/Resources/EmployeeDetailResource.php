@@ -31,7 +31,33 @@ class EmployeeDetailResource extends Resource
                             ->required(),
                         Forms\Components\TextInput::make('nip')
                             ->label('NIP Baru (18 Digit)')
-                            ->minLength(18)->maxLength(18),
+                            ->minLength(18)->maxLength(18)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get) {
+                                // Trigger kalkulasi saat NIP berubah
+                                $nip = $state;
+                                $pangkat = $get('pangkat_golongan');
+                                if (!$nip || strlen($nip) != 18) return;
+
+                                $isPPPK = $pangkat && str_contains($pangkat, 'PPPK');
+                                
+                                try {
+                                    if ($isPPPK) {
+                                        // PPPK: 4 digit tahun (8-12)
+                                        $startYear = (int)substr($nip, 8, 4);
+                                        $years = max(0, (int)date('Y') - $startYear);
+                                        $set('masa_kerja_tahun', $years);
+                                        $set('masa_kerja_bulan', 0);
+                                    } else {
+                                        // PNS: 6 digit YYYYMM (8-14)
+                                        $tmtString = substr($nip, 8, 6);
+                                        $tmtDate = \Carbon\Carbon::createFromFormat('Ym', $tmtString);
+                                        $diff = $tmtDate->diff(\Carbon\Carbon::now());
+                                        $set('masa_kerja_tahun', $diff->y);
+                                        $set('masa_kerja_bulan', $diff->m);
+                                    }
+                                } catch (\Exception $e) {}
+                            }),
                         Forms\Components\TextInput::make('nip_lama')
                             ->label('NIP Lama (9 Digit)')
                             ->minLength(9)->maxLength(9),
@@ -42,7 +68,30 @@ class EmployeeDetailResource extends Resource
                         Forms\Components\Select::make('pangkat_golongan')
                             ->label('Pangkat/Golongan')
                             ->options(EmployeeDetail::getPangkatOptions())
-                            ->searchable(),
+                            ->searchable()
+                            ->live()
+                            ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get) {
+                                // Trigger kalkulasi saat Pangkat berubah (cek PPPK/PNS)
+                                $nip = $get('nip');
+                                if (!$nip || strlen($nip) != 18) return;
+
+                                $isPPPK = str_contains($state, 'PPPK');
+                                
+                                try {
+                                    if ($isPPPK) {
+                                        $startYear = (int)substr($nip, 8, 4);
+                                        $years = max(0, (int)date('Y') - $startYear);
+                                        $set('masa_kerja_tahun', $years);
+                                        $set('masa_kerja_bulan', 0);
+                                    } else {
+                                        $tmtString = substr($nip, 8, 6);
+                                        $tmtDate = \Carbon\Carbon::createFromFormat('Ym', $tmtString);
+                                        $diff = $tmtDate->diff(\Carbon\Carbon::now());
+                                        $set('masa_kerja_tahun', $diff->y);
+                                        $set('masa_kerja_bulan', $diff->m);
+                                    }
+                                } catch (\Exception $e) {}
+                            }),
                         
                         Forms\Components\DatePicker::make('tmt_pangkat')
                             ->label('TMT Pangkat'),
@@ -55,10 +104,14 @@ class EmployeeDetailResource extends Resource
                         Forms\Components\Group::make([
                             Forms\Components\TextInput::make('masa_kerja_tahun')
                                 ->label('MK Tahun')
-                                ->numeric(),
+                                ->numeric()
+                                ->readOnly() // Biar konsisten
+                                ->helperText('Otomatis dari NIP'),
                             Forms\Components\TextInput::make('masa_kerja_bulan')
                                 ->label('MK Bulan')
-                                ->numeric(),
+                                ->numeric()
+                                ->readOnly()
+                                ->helperText('Otomatis dari NIP'),
                         ])->columns(2)->label('Masa Kerja'),
                     ])->columns(2),
 

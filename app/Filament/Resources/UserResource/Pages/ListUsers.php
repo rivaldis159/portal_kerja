@@ -24,6 +24,7 @@ class ListUsers extends ListRecords
                 ->label('Import Excel')
                 ->icon('heroicon-o-arrow-up-tray')
                 ->color('success')
+                ->visible(fn () => auth()->user()->isSuperAdmin() || auth()->user()->isKepala()) // Proteksi Akses
                 ->form([
                     FileUpload::make('attachment')
                         ->label('Upload File Excel (.xlsx)')

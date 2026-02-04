@@ -95,22 +95,48 @@
                 isLoading: false,
                 htmlContent: '',
                 
+                page: 1, // Current Page
+                
                 async fetchData() {
                     this.isLoading = true;
                     const params = new URLSearchParams({
                         search: this.search,
                         sort: this.sort,
                         direction: this.direction,
-                        per_page: this.perPage
+                        per_page: this.perPage,
+                        page: this.page // Send Page Param
                     });
 
                     try {
-                        const response = await fetch(`{{ route('portal.employees.search') }}?${params.toString()}`);
+                        const response = await fetch(`{{ route('portal.employees.search') }}?${params.toString()}`, {
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        });
                         this.htmlContent = await response.text();
                         
-                        // Update Pagination render if needed (logic handled by partial returning rows + hidden pagination data if simple)
-                        // Note: For full pagination update we might need a better strategy, 
-                        // but for 'Show All' vs 'Paginate', checking the hidden row is a simple trick or just replacing the whole table body.
+                        this.$nextTick(() => {
+                            const source = document.getElementById('pagination-source');
+                            const destination = document.getElementById('pagination-destination');
+                            
+                            if (source && destination) {
+                                destination.innerHTML = source.innerHTML;
+                                source.remove();
+                                
+                                // RE-BIND CLICK LISTENERS TO NEW LINKS
+                                destination.querySelectorAll('a').forEach(link => {
+                                    link.addEventListener('click', (e) => {
+                                        e.preventDefault();
+                                        const url = new URL(link.href);
+                                        const page = url.searchParams.get('page');
+                                        if (page) {
+                                            this.page = page;
+                                            this.fetchData();
+                                        }
+                                    });
+                                });
+                            } else if (destination) {
+                                destination.innerHTML = '';
+                            }
+                        });
                     } catch (error) {
                         console.error('Error fetching data:', error);
                     } finally {
@@ -121,8 +147,14 @@
                     this.fetchData();
                     
                     // Watchers
-                    this.$watch('search', () => { setTimeout(() => this.fetchData(), 500) }); // Debounce 500ms manually roughly
-                    this.$watch('perPage', () => this.fetchData());
+                    this.$watch('search', () => { 
+                        this.page = 1; // Reset to page 1 on search
+                        setTimeout(() => this.fetchData(), 500) 
+                    }); 
+                    this.$watch('perPage', () => {
+                        this.page = 1; // Reset to page 1 on perPage change
+                        this.fetchData();
+                    });
                 },
                 setSort(column) {
                     if (this.sort === column) {
@@ -201,9 +233,14 @@
                         </table>
                     </div>
                     
-                    <div class="p-4 border-t border-gray-200 bg-gray-50/50 text-xs text-gray-500 text-center">
-                        <span x-show="perPage !== 'all'">Menampilkan maksimal <span x-text="perPage"></span> data per halaman.</span>
-                        <span x-show="perPage === 'all'">Menampilkan <strong>seluruh data</strong> pegawai.</span>
+                    <div class="p-4 border-t border-gray-200 bg-gray-50/50 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div class="text-xs text-gray-500">
+                            <span x-show="perPage !== 'all'">Menampilkan maksimal <span x-text="perPage"></span> data per halaman.</span>
+                            <span x-show="perPage === 'all'">Menampilkan <strong>seluruh data</strong> pegawai.</span>
+                        </div>
+                        <div id="pagination-destination" class="text-sm">
+                            <!-- Pagination Links will be injected here -->
+                        </div>
                     </div>
                 </div>
             </div>

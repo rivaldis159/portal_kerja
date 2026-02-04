@@ -21,11 +21,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Fix untuk Ngrok/Tunneling:
-        // Saat pakai ngrok, Laravel menerima header Host: portal_kerja.test (karena --host-header=rewrite)
-        // Tapi browser user mengakses via ...ngrok-free.app
-        // Akibatnya aset (logo) dan CSRF (login) error.
-        // Script ini memaksa Laravel menggunakan domain asli Ngrok jika terdeteksi.
+        \Illuminate\Pagination\Paginator::useTailwind();
+
         
         if (isset($_SERVER['HTTP_X_FORWARDED_HOST'])) {
             $forceUrl = 'https://' . $_SERVER['HTTP_X_FORWARDED_HOST'];
