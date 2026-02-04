@@ -13,7 +13,6 @@
         body { font-family: 'Inter', sans-serif; }
         [x-cloak] { display: none !important; }
         html { scroll-behavior: smooth; }
-        
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { bg-transparent; }
@@ -26,16 +25,9 @@
                 extend: {
                     colors: {
                         primary: {
-                            50: '#fffbf7',
-                            100: '#fef3e6',
-                            200: '#fce3c7',
-                            300: '#facd9f',
-                            400: '#f8b170',
-                            500: '#f79039', // Base
-                            600: '#e87221',
-                            700: '#c15518',
-                            800: '#99431a',
-                            900: '#7c3818',
+                            50: '#fffbf7', 100: '#fef3e6', 200: '#fce3c7', 300: '#facd9f',
+                            400: '#f8b170', 500: '#f79039', 600: '#e87221', 700: '#c15518',
+                            800: '#99431a', 900: '#7c3818',
                         }
                     }
                 }
@@ -47,11 +39,14 @@
 <body class="flex h-full overflow-hidden bg-slate-50" x-data="{ sidebarOpen: false, search: '' }">
 
     <!-- Mobile Sidebar Backdrop -->
-    <div x-show="sidebarOpen" @click="sidebarOpen = false" x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition-opacity ease-linear duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-slate-900/80 z-40 lg:hidden" x-cloak></div>
+    <div x-show="sidebarOpen" @click="sidebarOpen = false" 
+         x-transition:enter="transition-opacity ease-linear duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" 
+         x-transition:leave="transition-opacity ease-linear duration-300" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" 
+         class="fixed inset-0 bg-slate-900/80 z-40 lg:hidden" x-cloak></div>
 
     <!-- Sidebar -->
     <aside class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-slate-200 transform transition-transform duration-300 lg:static lg:translate-x-0 flex flex-col"
-        :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
+           :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'">
         
         <!-- Logo -->
         <div class="h-16 flex items-center px-6 border-b border-slate-100 shrink-0">
@@ -67,17 +62,15 @@
         <!-- Navigation -->
         <div class="flex-1 overflow-y-auto py-6 px-4 space-y-1">
             <p class="px-2 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Kategori</p>
-            
-
 
             @foreach($categories as $category)
-            @if($category->links->isNotEmpty())
-            <a href="#cat-{{ $category->id }}" @click="sidebarOpen = false"
-               class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition group">
-                <span class="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover:bg-blue-500 transition"></span>
-                {{ $category->name }}
-            </a>
-            @endif
+                @if($category->links->isNotEmpty())
+                <a href="#cat-{{ $category->id }}" @click="sidebarOpen = false"
+                   class="flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-lg text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition group">
+                    <span class="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover:bg-blue-500 transition"></span>
+                    {{ $category->name }}
+                </a>
+                @endif
             @endforeach
         </div>
 
@@ -92,13 +85,11 @@
         
         <!-- Top Header -->
         <header class="bg-white border-b border-slate-200 h-16 shrink-0 flex items-center justify-between px-4 sm:px-6 lg:px-8 z-30 relative">
-            
             <div class="flex items-center gap-4 flex-1">
                 <!-- Mobile Toggle -->
                 <button @click="sidebarOpen = true" class="lg:hidden text-slate-500 hover:text-slate-700 p-2 -ml-2 rounded-lg hover:bg-slate-100 transition">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                 </button>
-
             </div>
 
             <!-- Centered Search Bar -->
@@ -190,7 +181,7 @@
                     <div class="relative z-10 max-w-2xl">
                         @auth
                         <h2 class="text-2xl sm:text-3xl font-bold text-slate-800 mb-2">
-                            Halo, <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-orange-600">{{ Auth::user()->name }}</span>
+                            Halo, <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-orange-600">{{ Auth::user()->name }}</span> 👋
                         </h2>
                         <p class="text-slate-500">Selamat datang! Akses semua aplikasi dan link kerja BPS Kabupaten Dairi di sini</p>
                         @else
@@ -203,68 +194,67 @@
                 <!-- Content Grid -->
                 <div class="space-y-10 min-h-[50vh]">
                     @forelse($categories as $category)
-                    @if($category->links->isNotEmpty())
-                    <section id="cat-{{ $category->id }}" class="category-section scroll-mt-24" 
-                        x-data="{ hasVisibleLinks: true, expanded: true }" 
-                        x-show="hasVisibleLinks" 
-                        x-effect="hasVisibleLinks = search === '' || [...$el.querySelectorAll('a[data-title]')].some(el => el.dataset.title.includes(search.toLowerCase()) || el.dataset.description.includes(search.toLowerCase()))"
-                        x-transition>
-                        
-                        <div class="flex items-center gap-4 mb-5 cursor-pointer select-none group/cat" @click="expanded = !expanded">
-                            <button class="bg-slate-100 hover:bg-slate-200 p-1.5 rounded-lg text-slate-500 transition">
-                                <svg class="w-4 h-4 transform transition-transform duration-200" :class="{'rotate-180': !expanded}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                            </button>
-                            <h3 class="text-lg font-bold text-slate-800 uppercase tracking-wide group-hover/cat:text-primary-600 transition">{{ $category->name }}</h3>
-                            <div class="h-px bg-slate-200 flex-1 group-hover/cat:bg-primary-100 transition"></div>
-                        </div>
+                        @if($category->links->isNotEmpty())
+                        <section id="cat-{{ $category->id }}" class="category-section scroll-mt-24" 
+                            x-data="{ hasVisibleLinks: true, expanded: true }" 
+                            x-show="hasVisibleLinks" 
+                            x-effect="hasVisibleLinks = search === '' || [...$el.querySelectorAll('a[data-title]')].some(el => el.dataset.title.includes(search.toLowerCase()) || el.dataset.description.includes(search.toLowerCase()))"
+                            x-transition>
+                            
+                            <div class="flex items-center gap-4 mb-5 cursor-pointer select-none group/cat" @click="expanded = !expanded">
+                                <button class="bg-slate-100 hover:bg-slate-200 p-1.5 rounded-lg text-slate-500 transition">
+                                    <svg class="w-4 h-4 transform transition-transform duration-200" :class="{'rotate-180': !expanded}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                                <h3 class="text-lg font-bold text-slate-800 uppercase tracking-wide group-hover/cat:text-primary-600 transition">{{ $category->name }}</h3>
+                                <div class="h-px bg-slate-200 flex-1 group-hover/cat:bg-primary-100 transition"></div>
+                            </div>
 
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
-                             x-show="expanded"
-                             x-collapse>
-                            @foreach($category->links as $link)
-                            <a href="{{ route('link.redirect', $link) }}"
-                               target="{{ $link->target ?? '_blank' }}"
-                               class="group relative bg-white rounded-xl border border-slate-200 p-4 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 hover:-translate-y-1 flex flex-col h-full overflow-hidden"
-                               data-title="{{ strtolower($link->title) }}"
-                               data-description="{{ strtolower($link->description ?? '') }}"
-                               x-show="search === '' || $el.dataset.title.includes(search.toLowerCase()) || $el.dataset.description.includes(search.toLowerCase())">
-                                
-                                <div class="absolute left-0 top-0 bottom-0 w-1 {{ $link->is_vpn_required ? 'bg-red-400' : 'bg-blue-500' }}"></div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6"
+                                 x-show="expanded" x-collapse>
+                                @foreach($category->links as $link)
+                                <a href="{{ route('link.redirect', $link) }}"
+                                   target="{{ $link->target ?? '_blank' }}"
+                                   class="group relative bg-white rounded-xl border border-slate-200 p-4 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 hover:-translate-y-1 flex flex-col h-full overflow-hidden"
+                                   data-title="{{ strtolower($link->title) }}"
+                                   data-description="{{ strtolower($link->description ?? '') }}"
+                                   x-show="search === '' || $el.dataset.title.includes(search.toLowerCase()) || $el.dataset.description.includes(search.toLowerCase())">
+                                    
+                                    <div class="absolute left-0 top-0 bottom-0 w-1 {{ $link->is_vpn_required ? 'bg-red-400' : 'bg-blue-500' }}"></div>
 
-                                <div class="flex justify-between items-start mb-2 pl-2">
-                                    <div class="flex items-center gap-2 flex-wrap">
-                                        @if($link->is_bps_pusat)
-                                        <span class="text-[10px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">PUSAT</span>
-                                        @elseif($link->team)
-                                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border border-current/10" style="color: {{ $link->team->color }}; background-color: {{ $link->team->color }}10;">
-                                            {{ Str::limit($link->team->name, 12) }}
+                                    <div class="flex justify-between items-start mb-2 pl-2">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            @if($link->is_bps_pusat)
+                                            <span class="text-[10px] font-bold bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">PUSAT</span>
+                                            @elseif($link->team)
+                                            <span class="text-[10px] font-bold px-1.5 py-0.5 rounded border border-current/10" style="color: {{ $link->team->color }}; background-color: {{ $link->team->color }}10;">
+                                                {{ Str::limit($link->team->name, 12) }}
+                                            </span>
+                                            @endif
+                                        </div>
+                                        @if($link->is_vpn_required)
+                                        <span class="text-[10px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded border border-red-100 flex items-center gap-1">
+                                            <span class="w-1 h-1 rounded-full bg-red-500 animate-pulse"></span> VPN
                                         </span>
                                         @endif
                                     </div>
-                                    @if($link->is_vpn_required)
-                                    <span class="text-[10px] font-bold text-red-600 bg-red-50 px-1.5 py-0.5 rounded border border-red-100 flex items-center gap-1">
-                                        <span class="w-1 h-1 rounded-full bg-red-500 animate-pulse"></span> VPN
-                                    </span>
+
+                                    <h4 class="font-bold text-slate-800 group-hover:text-blue-600 transition pl-2 line-clamp-2 mb-1">{{ $link->title }}</h4>
+                                    
+                                    @if($link->description)
+                                    <p class="text-xs text-slate-500 pl-2 line-clamp-2 mb-3">{{ $link->description }}</p>
                                     @endif
-                                </div>
 
-                                <h4 class="font-bold text-slate-800 group-hover:text-blue-600 transition pl-2 line-clamp-2 mb-1">{{ $link->title }}</h4>
-                                
-                                @if($link->description)
-                                <p class="text-xs text-slate-500 pl-2 line-clamp-2 mb-3">{{ $link->description }}</p>
-                                @endif
-
-                                <div class="mt-auto pl-2 flex items-center gap-2 pt-2 border-t border-slate-50">
-                                    <div class="bg-slate-50 p-1 rounded text-slate-400 group-hover:text-blue-500 transition">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                    <div class="mt-auto pl-2 flex items-center gap-2 pt-2 border-t border-slate-50">
+                                        <div class="bg-slate-50 p-1 rounded text-slate-400 group-hover:text-blue-500 transition">
+                                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                        </div>
+                                        <span class="text-[10px] text-slate-400 font-mono truncate max-w-[150px]">{{ parse_url($link->url, PHP_URL_HOST) ?? 'External Link' }}</span>
                                     </div>
-                                    <span class="text-[10px] text-slate-400 font-mono truncate max-w-[150px]">{{ parse_url($link->url, PHP_URL_HOST) ?? 'External Link' }}</span>
-                                </div>
-                            </a>
-                            @endforeach
-                        </div>
-                    </section>
-                    @endif
+                                </a>
+                                @endforeach
+                            </div>
+                        </section>
+                        @endif
                     @empty
                     <div class="flex flex-col items-center justify-center py-20 text-center">
                         <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mb-4">

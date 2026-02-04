@@ -13,8 +13,11 @@ use Filament\Tables\Table;
 class LinkResource extends Resource
 {
     protected static ?string $model = Link::class;
+
     protected static ?string $navigationIcon = 'heroicon-o-link';
+
     protected static ?string $navigationGroup = 'Manajemen Portal';
+
     protected static ?string $navigationLabel = 'Kelola Link';
 
     public static function form(Form $form): Form
@@ -26,13 +29,12 @@ class LinkResource extends Resource
                         Forms\Components\Section::make('Info Link')
                             ->schema([
                                 Forms\Components\Select::make('team_id')
-                                    ->relationship('team', 'name', fn(\Illuminate\Database\Eloquent\Builder $query) => 
-                                        auth()->user()->isSuperAdmin() || auth()->user()->isKepala() 
-                                            ? $query 
+                                    ->relationship('team', 'name', fn (\Illuminate\Database\Eloquent\Builder $query) => auth()->user()->isSuperAdmin() || auth()->user()->isKepala()
+                                            ? $query
                                             : $query->whereIn('id', auth()->user()->getManagedTeamIds())
                                     )
                                     ->label('Tim Pemilik')
-                                    ->default(fn() => auth()->user()->teams()->wherePivot('role', 'admin')->first()?->id)
+                                    ->default(fn () => auth()->user()->teams()->wherePivot('role', 'admin')->first()?->id)
                                     ->required(),
                                 Forms\Components\Select::make('category_id')
                                     ->relationship('category', 'name')
@@ -43,8 +45,8 @@ class LinkResource extends Resource
                                     ->required()
                                     ->live(onBlur: true)
                                     ->afterStateUpdated(function ($state, Forms\Set $set) {
-                                        if ($state && !preg_match('/^https?:\/\//', $state)) {
-                                            $set('url', 'https://' . $state);
+                                        if ($state && ! preg_match('/^https?:\/\//', $state)) {
+                                            $set('url', 'https://'.$state);
                                         }
                                     })
                                     ->url()
@@ -62,7 +64,7 @@ class LinkResource extends Resource
                                     ->rows(3)
                                     ->placeholder('Tambahkan keterangan untuk memudahkan pencarian...')
                                     ->columnSpanFull(),
-                            ])
+                            ]),
                     ]),
 
                 Forms\Components\Group::make()
@@ -75,8 +77,8 @@ class LinkResource extends Resource
                                 Forms\Components\Toggle::make('is_bps_pusat')
                                     ->label('Link Pusat')
                                     ->visible(fn () => auth()->user()?->isSuperAdmin() || auth()->user()?->isKepala() || auth()->user()?->isAdminTim()),
-                            ])
-                    ])
+                            ]),
+                    ]),
             ]);
     }
 
@@ -87,7 +89,7 @@ class LinkResource extends Resource
                 Tables\Columns\TextColumn::make('title')->searchable(),
                 Tables\Columns\TextColumn::make('category.name')->badge(),
                 Tables\Columns\TextColumn::make('team.name')->label('Tim'),
-                
+
                 // Badge Status
                 Tables\Columns\IconColumn::make('is_bps_pusat')
                     ->label('Link Pusat')
@@ -100,7 +102,7 @@ class LinkResource extends Resource
                     ->boolean()
                     ->trueIcon('heroicon-o-lock-closed')
                     ->trueColor('info'),
-                    
+
                 Tables\Columns\ToggleColumn::make('is_active')
                     ->label('Status Aktif'),
             ])
@@ -118,6 +120,7 @@ class LinkResource extends Resource
             'edit' => Pages\EditLink::route('/{record}/edit'),
         ];
     }
+
     public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
     {
         $query = parent::getEloquentQuery();

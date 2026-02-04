@@ -13,9 +13,13 @@ use Filament\Tables\Table;
 class EmployeeDetailResource extends Resource
 {
     protected static ?string $model = EmployeeDetail::class;
+
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
+
     protected static ?string $navigationLabel = 'Manajemen Pegawai';
+
     protected static ?string $pluralLabel = 'Data Pegawai';
+
     protected static ?string $navigationGroup = 'Kepegawaian';
 
     public static function form(Form $form): Form
@@ -36,13 +40,15 @@ class EmployeeDetailResource extends Resource
                             ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get) {
                                 $nip = $state;
                                 $pangkat = $get('pangkat_golongan');
-                                if (!$nip || strlen($nip) != 18) return;
+                                if (! $nip || strlen($nip) != 18) {
+                                    return;
+                                }
                                 $isPPPK = $pangkat && str_contains($pangkat, 'PPPK');
 
                                 try {
                                     if ($isPPPK) {
-                                        $startYear = (int)substr($nip, 8, 4);
-                                        $years = max(0, (int)date('Y') - $startYear);
+                                        $startYear = (int) substr($nip, 8, 4);
+                                        $years = max(0, (int) date('Y') - $startYear);
                                         $set('masa_kerja_tahun', $years);
                                         $set('masa_kerja_bulan', 0);
                                     } else {
@@ -52,7 +58,8 @@ class EmployeeDetailResource extends Resource
                                         $set('masa_kerja_tahun', $diff->y);
                                         $set('masa_kerja_bulan', $diff->m);
                                     }
-                                } catch (\Exception $e) {}
+                                } catch (\Exception $e) {
+                                }
                             }),
                         Forms\Components\TextInput::make('nip_lama')
                             ->label('NIP Lama (9 Digit)')
@@ -68,14 +75,16 @@ class EmployeeDetailResource extends Resource
                             ->live()
                             ->afterStateUpdated(function ($state, Forms\Set $set, Forms\Get $get) {
                                 $nip = $get('nip');
-                                if (!$nip || strlen($nip) != 18) return;
+                                if (! $nip || strlen($nip) != 18) {
+                                    return;
+                                }
 
                                 $isPPPK = str_contains($state, 'PPPK');
-                                
+
                                 try {
                                     if ($isPPPK) {
-                                        $startYear = (int)substr($nip, 8, 4);
-                                        $years = max(0, (int)date('Y') - $startYear);
+                                        $startYear = (int) substr($nip, 8, 4);
+                                        $years = max(0, (int) date('Y') - $startYear);
                                         $set('masa_kerja_tahun', $years);
                                         $set('masa_kerja_bulan', 0);
                                     } else {
@@ -85,9 +94,10 @@ class EmployeeDetailResource extends Resource
                                         $set('masa_kerja_tahun', $diff->y);
                                         $set('masa_kerja_bulan', $diff->m);
                                     }
-                                } catch (\Exception $e) {}
+                                } catch (\Exception $e) {
+                                }
                             }),
-                        
+
                         Forms\Components\DatePicker::make('tmt_pangkat')
                             ->label('TMT Pangkat'),
 
@@ -95,7 +105,7 @@ class EmployeeDetailResource extends Resource
                             ->label('Jabatan')
                             ->options(EmployeeDetail::getJabatanOptions())
                             ->searchable(),
-                        
+
                         Forms\Components\Group::make([
                             Forms\Components\TextInput::make('masa_kerja_tahun')
                                 ->label('MK Tahun')
@@ -112,8 +122,8 @@ class EmployeeDetailResource extends Resource
                     ->schema([
                         Forms\Components\Select::make('pendidikan_strata')
                             ->options([
-                                'SMA/SMK' => 'SMA/SMK', 'D-I'=>'D-I', 'D-II'=>'D-II', 'D-III'=>'D-III',
-                                'D-IV'=>'D-IV', 'S-1'=>'S-1', 'S-2'=>'S-2', 'S-3'=>'S-3'
+                                'SMA/SMK' => 'SMA/SMK', 'D-I' => 'D-I', 'D-II' => 'D-II', 'D-III' => 'D-III',
+                                'D-IV' => 'D-IV', 'S-1' => 'S-1', 'S-2' => 'S-2', 'S-3' => 'S-3',
                             ]),
                         Forms\Components\TextInput::make('pendidikan_jurusan')
                             ->placeholder('Contoh: Statistika'),
@@ -126,7 +136,7 @@ class EmployeeDetailResource extends Resource
                         Forms\Components\DatePicker::make('tanggal_lahir'),
                         Forms\Components\TextInput::make('nik')->label('NIK KTP'),
                         Forms\Components\Select::make('status_perkawinan')
-                            ->options(['Belum Kawin'=>'Belum Kawin', 'Kawin'=>'Kawin', 'Cerai Hidup'=>'Cerai Hidup', 'Cerai Mati'=>'Cerai Mati']),
+                            ->options(['Belum Kawin' => 'Belum Kawin', 'Kawin' => 'Kawin', 'Cerai Hidup' => 'Cerai Hidup', 'Cerai Mati' => 'Cerai Mati']),
                         Forms\Components\TextInput::make('nama_pasangan'),
                         Forms\Components\Textarea::make('alamat_tinggal')->columnSpanFull(),
                     ])->columns(3),

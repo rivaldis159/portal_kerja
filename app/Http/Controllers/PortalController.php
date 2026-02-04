@@ -2,20 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use App\Models\Category;
-use App\Models\Team;
 
 class PortalController extends Controller
 {
     public function index()
     {
         $user = auth()->user();
-
-        // Ambil ID & Nama Tim untuk filter dropdown (jika perlu)
-        $teams = Team::select('id', 'name')->get();
 
         $categories = Category::where('is_active', true)
             ->with(['links' => function ($query) use ($user) {
@@ -27,16 +23,16 @@ class PortalController extends Controller
                 }
 
                 $query->where(function ($q) use ($user) {
-                        $q->where('is_public', true)
-                          ->orWhere('is_bps_pusat', true);
-                        
-                        if ($user) {
-                            $myTeamIds = $user->teams->pluck('id')->toArray();
-                            if (!empty($myTeamIds)) {
-                                $q->orWhereIn('team_id', $myTeamIds);
-                            }
+                    $q->where('is_public', true)
+                        ->orWhere('is_bps_pusat', true);
+
+                    if ($user) {
+                        $myTeamIds = $user->teams->pluck('id')->toArray();
+                        if (! empty($myTeamIds)) {
+                            $q->orWhereIn('team_id', $myTeamIds);
                         }
-                    });
+                    }
+                });
             }])
             ->orderBy('name', 'asc')
             ->get();
@@ -48,8 +44,13 @@ class PortalController extends Controller
             $uniqueLinks = $category->links
                 ->sortByDesc(function ($link) use ($myTeamIds) {
                     $score = 0;
-                    if ($link->is_bps_pusat) $score += 100;
-                    if (in_array($link->team_id, $myTeamIds)) $score += 50;
+                    if ($link->is_bps_pusat) {
+                        $score += 100;
+                    }
+                    if (in_array($link->team_id, $myTeamIds)) {
+                        $score += 50;
+                    }
+
                     return $score + $link->updated_at->timestamp;
                 })
                 ->unique('url') // Ambil satu saja berdasarkan URL (item dengan sorting teratas yang diambil)
@@ -58,12 +59,15 @@ class PortalController extends Controller
             $category->setRelation('links', $uniqueLinks);
         });
 
-        return view('portal.index', compact('categories', 'teams'));
+        return view('portal.index', compact('categories'));
     }
 
     public function loginForm()
     {
-        if (Auth::check()) return redirect('/');
+        if (Auth::check()) {
+            return redirect('/');
+        }
+
         return view('portal.login');
     }
 
@@ -76,6 +80,7 @@ class PortalController extends Controller
 
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
+
             return redirect()->intended('/');
         }
 
@@ -87,6 +92,7 @@ class PortalController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return redirect('/login');
     }
 
@@ -94,6 +100,7 @@ class PortalController extends Controller
     {
         $user = Auth::user();
         $user->load('employeeDetail');
+
         return view('portal.profile', compact('user'));
     }
 
@@ -103,7 +110,7 @@ class PortalController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
+            'email' => 'required|email|unique:users,email,'.$user->id,
             'password' => 'nullable|min:8|confirmed',
             'nip' => 'nullable|numeric|digits:18',
             'nip_lama' => 'nullable|numeric|digits:9',
@@ -126,7 +133,7 @@ class PortalController extends Controller
 
         $user->name = $validated['name'];
         $user->email = $validated['email'];
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
         }
         $user->save();
@@ -138,28 +145,33 @@ class PortalController extends Controller
                 'nip_lama' => $request->nip_lama,
                 'pangkat_golongan' => $request->pangkat_golongan,
                 'tmt_pangkat' => $request->tmt_pangkat,
-                
-                'masa_kerja_tahun' => (function() use ($request) {
+
+                'masa_kerja_tahun' => (function () use ($request) {
                     if ($request->nip && strlen($request->nip) == 18) {
                         try {
                             $isPPPK = str_contains($request->pangkat_golongan, 'PPPK');
-                            
+
                             if ($isPPPK) {
                                 $yearString = substr($request->nip, 8, 4);
-                                $startYear = (int)$yearString;
-                                $currentYear = (int)date('Y');
+                                $startYear = (int) $yearString;
+                                $currentYear = (int) date('Y');
+
                                 return max(0, $currentYear - $startYear);
                             } else {
                                 $tmtString = substr($request->nip, 8, 6);
                                 $tmtDate = \Carbon\Carbon::createFromFormat('Ym', $tmtString);
+
                                 return $tmtDate->diff(\Carbon\Carbon::now())->y;
                             }
-                        } catch (\Exception $e) { return 0; }
+                        } catch (\Exception $e) {
+                            return 0;
+                        }
                     }
-                    return 0; 
+
+                    return 0;
                 })(),
-                
-                'masa_kerja_bulan' => (function() use ($request) {
+
+                'masa_kerja_bulan' => (function () use ($request) {
                     if ($request->nip && strlen($request->nip) == 18) {
                         try {
                             $isPPPK = str_contains($request->pangkat_golongan, 'PPPK');
@@ -169,10 +181,14 @@ class PortalController extends Controller
                             } else {
                                 $tmtString = substr($request->nip, 8, 6);
                                 $tmtDate = \Carbon\Carbon::createFromFormat('Ym', $tmtString);
+
                                 return $tmtDate->diff(\Carbon\Carbon::now())->m;
                             }
-                        } catch (\Exception $e) { return 0; }
+                        } catch (\Exception $e) {
+                            return 0;
+                        }
                     }
+
                     return 0;
                 })(),
 
@@ -225,14 +241,14 @@ class PortalController extends Controller
             $query->orderBy('users.name', $sortDirection);
         } elseif ($sortColumn === 'jabatan') {
             $pangkatOrder = $this->getPangkatOrder();
-            $sqlCase = "CASE employee_details.pangkat_golongan ";
+            $sqlCase = 'CASE employee_details.pangkat_golongan ';
             foreach ($pangkatOrder as $index => $pangkat) {
-                $sqlCase .= "WHEN '$pangkat' THEN ".($index + 1)." ";
+                $sqlCase .= "WHEN '$pangkat' THEN ".($index + 1).' ';
             }
-            $sqlCase .= "ELSE 999 END"; 
+            $sqlCase .= 'ELSE 999 END';
             $query->orderByRaw("$sqlCase $sortDirection");
         } elseif ($sortColumn === 'masa_kerja') {
-            $query->orderByRaw("SUBSTR(employee_details.nip, 9, 6) " . $sortDirection);
+            $query->orderByRaw('SUBSTR(employee_details.nip, 9, 6) '.$sortDirection);
         }
 
         $employees = $query->paginate(20)->withQueryString();
@@ -243,13 +259,13 @@ class PortalController extends Controller
             ->groupBy('jabatan')
             ->pluck('total', 'jabatan')
             ->toArray();
-        
+
         $pangkatOrder = $this->getPangkatOrder();
         $golonganStatsRaw = \App\Models\EmployeeDetail::select('pangkat_golongan', \Illuminate\Support\Facades\DB::raw('count(*) as total'))
             ->groupBy('pangkat_golongan')
             ->pluck('total', 'pangkat_golongan')
             ->toArray();
-            
+
         // Sorting golongan tetap di PHP karena jumlahnya sedikit (hasil group by)
         $golonganStats = collect($golonganStatsRaw)->sortBy(function ($count, $key) use ($pangkatOrder) {
             return array_search($key, $pangkatOrder) !== false ? array_search($key, $pangkatOrder) : 999;
@@ -278,10 +294,15 @@ class PortalController extends Controller
             if ($d->tanggal_lahir) {
                 // Optimasi: pake diffInYears Carbon langsung
                 $age = \Carbon\Carbon::parse($d->tanggal_lahir)->age;
-                if ($age < 30) $umurStats['< 30 Thn']++;
-                elseif ($age <= 40) $umurStats['30-40 Thn']++;
-                elseif ($age <= 50) $umurStats['41-50 Thn']++;
-                else $umurStats['> 50 Thn']++;
+                if ($age < 30) {
+                    $umurStats['< 30 Thn']++;
+                } elseif ($age <= 40) {
+                    $umurStats['30-40 Thn']++;
+                } elseif ($age <= 50) {
+                    $umurStats['41-50 Thn']++;
+                } else {
+                    $umurStats['> 50 Thn']++;
+                }
             }
 
             // Hitung Masa Kerja
@@ -291,28 +312,34 @@ class PortalController extends Controller
                     $years = 0;
 
                     if ($isPPPK) {
-                         $startYear = (int)substr($d->nip, 8, 4);
-                         $years = max(0, (int)date('Y') - $startYear);
+                        $startYear = (int) substr($d->nip, 8, 4);
+                        $years = max(0, (int) date('Y') - $startYear);
                     } else {
                         $tmtString = substr($d->nip, 8, 6);
                         $tmtDate = \Carbon\Carbon::createFromFormat('Ym', $tmtString);
                         $years = $tmtDate->diffInYears(now());
                     }
 
-                    if ($years < 5) $masaKerjaStats['< 5 Thn']++;
-                    elseif ($years <= 10) $masaKerjaStats['5-10 Thn']++;
-                    elseif ($years <= 20) $masaKerjaStats['10-20 Thn']++;
-                    else $masaKerjaStats['> 20 Thn']++;
-                } catch (\Exception $e) { }
+                    if ($years < 5) {
+                        $masaKerjaStats['< 5 Thn']++;
+                    } elseif ($years <= 10) {
+                        $masaKerjaStats['5-10 Thn']++;
+                    } elseif ($years <= 20) {
+                        $masaKerjaStats['10-20 Thn']++;
+                    } else {
+                        $masaKerjaStats['> 20 Thn']++;
+                    }
+                } catch (\Exception $e) {
+                }
             }
         }
 
         $totalPegawai = \App\Models\User::where('role', '!=', 'super_admin')->count();
-        
+
         $avgAge = \App\Models\EmployeeDetail::whereNotNull('tanggal_lahir')
             ->selectRaw('AVG(DATEDIFF(NOW(), tanggal_lahir) / 365.25) as avg_age')
             ->value('avg_age');
-            
+
         $avgAge = round($avgAge ?: 0);
 
         // Options for Filters
@@ -333,23 +360,27 @@ class PortalController extends Controller
 
         // Apply Filters
         if ($request->filled('jabatan')) {
-            $query->whereHas('employeeDetail', fn($q) => $q->where('jabatan', $request->jabatan));
+            $query->whereHas('employeeDetail', fn ($q) => $q->where('jabatan', $request->jabatan));
         }
         if ($request->filled('pangkat')) {
-            $query->whereHas('employeeDetail', fn($q) => $q->where('pangkat_golongan', $request->pangkat));
+            $query->whereHas('employeeDetail', fn ($q) => $q->where('pangkat_golongan', $request->pangkat));
         }
         if ($request->filled('pendidikan')) {
-            $query->whereHas('employeeDetail', fn($q) => $q->where('pendidikan_strata', $request->pendidikan));
+            $query->whereHas('employeeDetail', fn ($q) => $q->where('pendidikan_strata', $request->pendidikan));
         }
         if ($request->filled('masa_kerja')) {
-            $query->whereHas('employeeDetail', function($q) use ($request) {
+            $query->whereHas('employeeDetail', function ($q) use ($request) {
                 // Assuming 'masa_kerja_tahun' is stored in DB.
                 // Filter ranges based on the char logic: <5, 5-10, 10-20, >20
                 switch ($request->masa_kerja) {
-                    case 'lt5': $q->where('masa_kerja_tahun', '<', 5); break;
-                    case '5-10': $q->whereBetween('masa_kerja_tahun', [5, 10]); break;
-                    case '10-20': $q->whereBetween('masa_kerja_tahun', [10, 20]); break;
-                    case 'gt20': $q->where('masa_kerja_tahun', '>', 20); break;
+                    case 'lt5': $q->where('masa_kerja_tahun', '<', 5);
+                        break;
+                    case '5-10': $q->whereBetween('masa_kerja_tahun', [5, 10]);
+                        break;
+                    case '10-20': $q->whereBetween('masa_kerja_tahun', [10, 20]);
+                        break;
+                    case 'gt20': $q->where('masa_kerja_tahun', '>', 20);
+                        break;
                 }
             });
         }
@@ -377,29 +408,29 @@ class PortalController extends Controller
         if ($sortColumn === 'name') {
             $query->orderBy('users.name', $sortDirection);
         } elseif ($sortColumn === 'jabatan') {
-             $pangkatOrder = $this->getPangkatOrder();
-             
-            $sqlCase = "CASE employee_details.pangkat_golongan ";
+            $pangkatOrder = $this->getPangkatOrder();
+
+            $sqlCase = 'CASE employee_details.pangkat_golongan ';
             foreach ($pangkatOrder as $index => $pangkat) {
-                $sqlCase .= "WHEN '$pangkat' THEN ".($index + 1)." ";
+                $sqlCase .= "WHEN '$pangkat' THEN ".($index + 1).' ';
             }
-            $sqlCase .= "ELSE 999 END";
-            
+            $sqlCase .= 'ELSE 999 END';
+
             $rankParams = $sortDirection === 'asc' ? 'desc' : 'asc';
-            
+
             $query->orderByRaw("$sqlCase $rankParams")
-                  ->orderBy('users.name', 'asc');
+                ->orderBy('users.name', 'asc');
         } elseif ($sortColumn === 'masa_kerja') {
             // Sort using database column 'masa_kerja_tahun' is more efficient/correct if available
             // but for consistency with 'stats' calculation we used substring before.
             // If masa_kerja_tahun is reliably populated:
-             $query->orderBy('employee_details.masa_kerja_tahun', $sortDirection);
+            $query->orderBy('employee_details.masa_kerja_tahun', $sortDirection);
         }
 
         if ($perPage == 'all') {
             $employees = $query->get();
         } else {
-            $employees = $query->paginate((int)$perPage)->withQueryString();
+            $employees = $query->paginate((int) $perPage)->withQueryString();
         }
 
         return view('portal.partials.employee-table', compact('employees'))->render();
@@ -423,20 +454,20 @@ class PortalController extends Controller
     private function getPangkatOrder()
     {
         return [
-            'Pembina Utama (IV/e)', 
+            'Pembina Utama (IV/e)',
             'PPPK Ahli Utama (XV)',
             'Pembina Utama Madya (IV/d)', 'Pembina Utama Muda (IV/c)', 'Pembina Tingkat I (IV/b)', 'Pembina (IV/a)', 'Pembina (V/a)',
             'PPPK Ahli Madya (XIII)',
-            'Penata Tingkat I (III/d)', 'Penata (III/c)', 
+            'Penata Tingkat I (III/d)', 'Penata (III/c)',
             'PPPK Ahli Muda (XI)',
             'Penata Muda Tingkat I (III/b)', 'Penata Muda (III/a)',
             'PPPK Ahli Pertama (IX)',
-            'Pengatur Tingkat I (II/d)', 'Pengatur (II/c)', 
+            'Pengatur Tingkat I (II/d)', 'Pengatur (II/c)',
             'PPPK Terampil (VII)',
             'Pengatur Muda Tingkat I (II/b)', 'Pengatur Muda (II/a)',
-            'Juru Tingkat I (I/d)', 'Juru (I/c)', 
+            'Juru Tingkat I (I/d)', 'Juru (I/c)',
             'PPPK Penata Layanan Operasional (V)', 'PPPK Pengelola Umum (V)',
-            'Juru Muda Tingkat I (I/b)', 'Juru Muda (I/a)'
+            'Juru Muda Tingkat I (I/b)', 'Juru Muda (I/a)',
         ];
     }
 }
