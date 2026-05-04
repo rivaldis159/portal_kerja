@@ -31,7 +31,7 @@
         
         <!-- Logo -->
         <div class="h-16 flex items-center px-6 border-b border-slate-100 shrink-0">
-            <a href="{{ route('landing') }}" class="flex items-center gap-3 group">
+            <a href="{{ route('portal.index') }}" class="flex items-center gap-3 group">
                 <img src="{{ asset('images/logo.png') }}" alt="Logo" class="h-8 w-auto">
                 <div>
                     <h1 class="font-bold text-slate-800 text-base leading-none group-hover:text-orange-600 transition">Portal Kerja</h1>
@@ -276,7 +276,7 @@
                                             @foreach($subcategory->links as $link)
                                             <a href="{{ route('link.redirect', $link) }}"
                                                target="{{ $link->target ?? '_blank' }}"
-                                               class="group relative bg-white rounded-xl border border-slate-200 p-3 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 hover:-translate-y-1 flex flex-col h-full overflow-hidden"
+                                               class="group relative bg-white rounded-xl border border-slate-200 p-3 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 hover:-translate-y-1 flex flex-col min-h-fit min-w-0 overflow-hidden"
                                                data-title="{{ strtolower($link->title) }}"
                                                data-description="{{ strtolower($link->description ?? '') }}"
                                                data-type="{{ $link->type ?? 'Sistem' }}"
@@ -326,7 +326,7 @@
                                     @foreach($category->links as $link)
                                     <a href="{{ route('link.redirect', $link) }}"
                                        target="{{ $link->target ?? '_blank' }}"
-                                       class="group relative bg-white rounded-xl border border-slate-200 p-3 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 hover:-translate-y-1 flex flex-col h-full overflow-hidden"
+                                       class="group relative bg-white rounded-xl border border-slate-200 p-3 hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/10 transition-all duration-300 hover:-translate-y-1 flex flex-col min-h-fit min-w-0 overflow-hidden"
                                        data-title="{{ strtolower($link->title) }}"
                                        data-description="{{ strtolower($link->description ?? '') }}"
                                        data-type="{{ $link->type ?? 'Sistem' }}"

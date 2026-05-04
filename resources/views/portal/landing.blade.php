@@ -132,17 +132,30 @@
             color: #fff;
             border: 1px solid rgba(255,255,255,0.1);
         }
-        .link-card:hover .card-icon {
-            background: linear-gradient(135deg, var(--accent), var(--accent-light));
-            border-color: transparent;
-            color: #fff;
-        }
+        /* Removed card-icon hover effect to preserve original color */
         .link-card:hover .card-title {
             color: var(--accent-light);
         }
         .link-card:hover .card-arrow {
             opacity: 1;
             transform: translate(0, 0);
+        }
+        /* Card background decoration */
+        .card-bg-decor {
+            position: absolute;
+            right: -8px;
+            bottom: -12px;
+            width: 72px;
+            height: 72px;
+            opacity: 0.06;
+            transform: rotate(-20deg);
+            pointer-events: none;
+            z-index: 0;
+            transition: opacity 0.35s ease, transform 0.35s ease;
+        }
+        .link-card:hover .card-bg-decor {
+            opacity: 0.12;
+            transform: rotate(-15deg) scale(1.1);
         }
 
         /* ===== Scrollbar ===== */
@@ -214,10 +227,43 @@
             border-radius: 50%;
             background: #22c55e;
         }
+
+        /* ===== Grid Layout ===== */
+        #links-grid {
+            display: grid;
+            grid-template-columns: repeat(1, minmax(0, 280px));
+            gap: 20px;
+            justify-content: center;
+        }
+        @media (min-width: 640px)  { #links-grid { grid-template-columns: repeat(2, minmax(0, 280px)); } }
+        @media (min-width: 1024px) { #links-grid { grid-template-columns: repeat(3, minmax(0, 280px)); } }
+        @media (min-width: 1280px) { #links-grid { grid-template-columns: repeat(4, minmax(0, 280px)); } }
+        #links-grid .link-card { width: 100%; }
+        #links-grid .link-card.search-hidden { display: none !important; }
     </style>
 </head>
 
-<body class="min-h-screen flex flex-col bg-transparent antialiased" style="font-family: 'Inter', system-ui, sans-serif;" x-data="{ search: '', scrolled: false }" @scroll.window="scrolled = window.scrollY > 60">
+<body class="min-h-screen flex flex-col bg-transparent antialiased" style="font-family: 'Inter', system-ui, sans-serif;" 
+      x-data="{ 
+          search: '', 
+          scrolled: false,
+          links: [
+              @foreach($links as $link)
+              { title: {{ json_encode(strtolower($link->title)) }}, desc: {{ json_encode(strtolower($link->description ?? '')) }} },
+              @endforeach
+          ],
+          matches(title, desc) {
+              if (this.search === '') return true;
+              let q = this.search.toLowerCase().trim();
+              return (title || '').toLowerCase().includes(q) || (desc || '').toLowerCase().includes(q);
+          },
+          checkResults() {
+              if (this.search.trim() === '') return true;
+              let q = this.search.toLowerCase().trim();
+              return this.links.some(l => l.title.includes(q) || l.desc.includes(q));
+          }
+      }" 
+      @scroll.window="scrolled = window.scrollY > 60">
 
     <div class="full-bg-container">
         <div class="hero-bg-img" style="background-image: url('{{ asset('images/hero-bg.jpg') }}')"></div>
@@ -282,18 +328,28 @@
 
         <!-- Links Grid -->
         @if($links->isNotEmpty())
-        <div class="flex flex-wrap justify-center gap-5" id="links-grid">
+        <div id="links-grid">
             @foreach($links as $index => $link)
             <a href="{{ route('link.redirect', $link) }}"
                target="{{ $link->target ?? '_blank' }}"
-               class="w-full sm:w-[calc(50%_-_10px)] lg:w-[calc(33.333%_-_13.4px)] xl:w-[calc(25%_-_15px)] link-card p-4 flex items-center gap-4 group shrink-0"
+               class="link-card p-4 flex items-center gap-4 group"
                style="animation-delay: {{ min($index * 0.05, 0.8) }}s"
-               data-title="{{ strtolower($link->title) }}"
-               data-description="{{ strtolower($link->description ?? '') }}"
-               x-show="search === '' || $el.dataset.title.includes(search.toLowerCase()) || $el.dataset.description.includes(search.toLowerCase())">
+               data-title="{{ $link->title }}"
+               data-description="{{ $link->description ?? '' }}"
+               x-init="setTimeout(() => { $el.style.opacity = '1'; $el.style.animation = 'none'; $el.style.animationDelay = '0s'; }, 1000)"
+               :class="matches($el.dataset.title, $el.dataset.description) ? '' : 'search-hidden'">
+
+                <!-- Background Decoration -->
+                <div class="card-bg-decor">
+                    @if($link->logo)
+                    <img src="{{ asset('storage/' . $link->logo) }}" alt="" class="w-full h-full object-contain">
+                    @else
+                    <svg class="w-full h-full" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24" opacity="0.8"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                    @endif
+                </div>
 
                 <!-- Logo -->
-                <div class="card-icon w-10 h-10 shrink-0 rounded-xl flex items-center justify-center transition-all duration-300 overflow-hidden">
+                <div class="card-icon w-10 h-10 shrink-0 rounded-xl flex items-center justify-center transition-all duration-300 overflow-hidden relative z-[1]">
                     @if($link->logo)
                     <img src="{{ asset('storage/' . $link->logo) }}" alt="" class="w-full h-full object-contain p-1.5 opacity-90 transition-all duration-300">
                     @else
@@ -302,10 +358,10 @@
                 </div>
 
                 <!-- Text -->
-                <div class="min-w-0 flex-1">
-                    <h4 class="card-title font-bold text-[15px] text-white truncate transition-colors duration-300 drop-shadow-md">{{ $link->title }}</h4>
+                <div class="min-w-0 flex-1 relative z-[1]">
+                    <h4 class="card-title font-bold text-[15px] text-white truncate transition-colors duration-300 drop-shadow-md" title="{{ $link->title }}">{{ $link->title }}</h4>
                     @if($link->description)
-                    <p class="text-[13px] text-slate-300 truncate leading-relaxed mt-0.5 drop-shadow-sm">{{ $link->description }}</p>
+                    <p class="text-[13px] text-slate-300 truncate leading-relaxed mt-0.5 drop-shadow-sm" title="{{ $link->description }}">{{ $link->description }}</p>
                     @endif
                 </div>
             </a>
@@ -314,17 +370,13 @@
         @endif
 
         <!-- Search Empty State -->
-        <div x-show="search.length > 0" x-cloak>
-            <template x-if="!document.querySelector('.link-card:not([style*=\'display: none\'])')">
-                <div class="flex flex-col items-center justify-center py-24 text-center">
-                    <div class="w-20 h-20 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] text-slate-400 rounded-2xl flex items-center justify-center mb-6">
-                        <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    </div>
-                    <h4 class="text-xl font-bold text-slate-200 mb-2">Tidak ditemukan</h4>
-                    <p class="text-slate-400 mb-6">Tidak ada hasil untuk "<span x-text="search" class="font-semibold text-slate-300"></span>"</p>
-                    <button @click="search = ''" class="px-5 py-2.5 bg-orange-500/20 text-orange-400 rounded-xl text-sm font-semibold hover:bg-orange-500/30 border border-orange-500/30 transition cursor-pointer">Reset Pencarian</button>
-                </div>
-            </template>
+        <div x-show="search.length > 0 && !checkResults()" x-cloak class="flex flex-col items-center justify-center py-24 text-center">
+            <div class="w-20 h-20 bg-[rgba(255,255,255,0.05)] border border-[rgba(255,255,255,0.1)] text-slate-400 rounded-2xl flex items-center justify-center mb-6">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+            <h4 class="text-xl font-bold text-slate-200 mb-2">Tidak ditemukan</h4>
+            <p class="text-slate-400 mb-6">Tidak ada hasil untuk "<span x-text="search" class="font-semibold text-slate-300"></span>"</p>
+            <button @click="search = ''" class="px-5 py-2.5 bg-orange-500/20 text-orange-400 rounded-xl text-sm font-semibold hover:bg-orange-500/30 border border-orange-500/30 transition cursor-pointer">Reset Pencarian</button>
         </div>
 
         @if($links->isEmpty())
@@ -359,7 +411,6 @@
     </footer>
 
     <script>
-        // Keyboard shortcut
         document.addEventListener('keydown', function(e) {
             if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                 e.preventDefault();

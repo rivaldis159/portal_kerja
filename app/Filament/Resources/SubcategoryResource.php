@@ -17,6 +17,7 @@ class SubcategoryResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static ?string $navigationGroup = 'Manajemen Portal';
     protected static ?string $navigationLabel = 'Subkategori Link';
+    protected static ?int $navigationSort = 1;
     protected static ?string $modelLabel = 'Subkategori';
     protected static ?string $slug = 'subcategori-links';
 

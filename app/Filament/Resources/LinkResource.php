@@ -19,6 +19,7 @@ class LinkResource extends Resource
     protected static ?string $navigationGroup = 'Manajemen Portal';
 
     protected static ?string $navigationLabel = 'Kelola Link';
+    protected static ?int $navigationSort = 2;
 
     public static function form(Form $form): Form
     {

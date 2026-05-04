@@ -136,40 +136,64 @@
                             </div>
                         </div>
 
-                        <!-- Filter Grid -->
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
-                            <select x-model="jabatan" class="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5">
-                                <option value="">Semua Jabatan</option>
-                                @foreach($filterJabatan as $j)
-                                <option value="{{ $j }}">{{ $j }}</option>
-                                @endforeach
-                            </select>
-
-                            <select x-model="pangkat" class="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5">
-                                <option value="">Semua Pangkat</option>
-                                @foreach($filterPangkat as $p)
-                                <option value="{{ $p }}">{{ $p }}</option>
-                                @endforeach
-                            </select>
-
-                            <select x-model="masaKerja" class="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5">
-                                <option value="">Semua Masa Kerja</option>
-                                <option value="lt5">< 5 Tahun</option>
-                                <option value="5-10">5 - 10 Tahun</option>
-                                <option value="10-20">10 - 20 Tahun</option>
-                                <option value="gt20">> 20 Tahun</option>
-                            </select>
-
-                            <select x-model="pendidikan" class="bg-gray-50 border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5">
-                                <option value="">Semua Pendidikan</option>
-                                @foreach($filterPendidikan as $p)
-                                <option value="{{ $p }}">{{ $p }}</option>
-                                @endforeach
-                            </select>
+                        <!-- Filter Bar -->
+                        <div class="bg-gray-50/80 border border-gray-100 rounded-xl p-4 space-y-3">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-2 text-sm font-semibold text-gray-600">
+                                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                                    Filter Pegawai
+                                </div>
+                                <button x-show="jabatan || pangkat || masaKerja || pendidikan"
+                                    @click="jabatan = ''; pangkat = ''; masaKerja = ''; pendidikan = '';"
+                                    class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition cursor-pointer"
+                                    x-transition>
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                                    Reset Filter
+                                </button>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 pl-1">Jabatan</label>
+                                    <select x-model="jabatan" class="bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 shadow-sm">
+                                        <option value="">Semua Jabatan</option>
+                                        @foreach($filterJabatan as $j)
+                                        <option value="{{ $j }}">{{ $j }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 pl-1">Pangkat</label>
+                                    <select x-model="pangkat" class="bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 shadow-sm">
+                                        <option value="">Semua Pangkat</option>
+                                        @foreach($filterPangkat as $p)
+                                        <option value="{{ $p }}">{{ $p }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 pl-1">Masa Kerja</label>
+                                    <select x-model="masaKerja" class="bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 shadow-sm">
+                                        <option value="">Semua Masa Kerja</option>
+                                        <option value="lt5">< 5 Tahun</option>
+                                        <option value="5-10">5 - 10 Tahun</option>
+                                        <option value="10-20">10 - 20 Tahun</option>
+                                        <option value="gt20">> 20 Tahun</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1 pl-1">Pendidikan</label>
+                                    <select x-model="pendidikan" class="bg-white border border-gray-200 text-gray-700 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 shadow-sm">
+                                        <option value="">Semua Pendidikan</option>
+                                        @foreach($filterPendidikan as $p)
+                                        <option value="{{ $p }}">{{ $p }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="overflow-x-auto min-h-[400px]" id="employee-table-container">
+                    <div class="overflow-x-auto" id="employee-table-container">
                         <div class="flex flex-col items-center justify-center py-20 text-gray-400">
                              <svg class="w-10 h-10 animate-spin text-primary-200 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                              <p>Memuat data pegawai...</p>

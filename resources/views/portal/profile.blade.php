@@ -7,6 +7,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         [x-cloak] { display: none !important; }
+        select.input-field { -webkit-appearance: none; -moz-appearance: none; appearance: none; background-image: none !important; }
     </style>
 </head>
 <body class="h-full text-slate-800 bg-slate-50/50 relative">
@@ -19,21 +20,19 @@
 
     <nav class="bg-white/70 backdrop-blur-xl sticky top-0 z-40 border-b border-slate-200/60 supports-[backdrop-filter]:bg-white/60">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
-            <a href="{{ route('portal.index') }}" class="group flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/50 transition">
-                <div class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-blue-50 group-hover:text-blue-600 transition text-slate-500">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                </div>
-                <span class="text-sm font-semibold text-slate-600 group-hover:text-slate-900 transition">Kembali ke Portal</span>
-            </a>
             <div class="flex items-center gap-3">
-                <div class="text-right hidden sm:block">
-                    <p class="text-sm font-bold text-slate-800">{{ $user->name }}</p>
-                    <p class="text-xs text-slate-500">{{ $user->email }}</p>
-                </div>
                 <div class="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/30">
                     {{ strtoupper(substr($user->name, 0, 1)) }}
                 </div>
+                <div class="hidden sm:block">
+                    <p class="text-sm font-bold text-slate-800">{{ $user->name }}</p>
+                    <p class="text-xs text-slate-500">{{ $user->email }}</p>
+                </div>
             </div>
+            <a href="{{ route('portal.index') }}" class="group flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-100 hover:bg-slate-200 transition">
+                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <span class="text-sm font-semibold text-slate-600">Kembali ke Portal</span>
+            </a>
         </div>
     </nav>
 
